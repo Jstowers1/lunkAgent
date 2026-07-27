@@ -13,6 +13,9 @@
      The WebUI does this at max-width:640px; we need it at any portrait width. */
   .layout { overflow-x: clip; }
 
+  /* Hide the icon rail entirely — the hamburger + overlay sidebar covers all nav */
+  .rail { display: none !important; }
+
   /* Sidebar: off-canvas slide-in */
   .sidebar {
     position: fixed !important;
@@ -52,14 +55,6 @@
   /* Full width for content */
   .messages-inner { max-width: 100% !important; padding: 16px !important; }
   .composer-wrap { padding: 8px 12px 12px !important; }
-
-  /* Fix auto-scroll jank: force overflow-anchor:auto so the browser holds
-     scroll position during streaming content growth. Desktop CSS disables
-     this (overflow-anchor:none), but our portrait viewport is desktop-width,
-     so we must re-enable it manually. The WebUI's own _fixMobileScrollJank
-     temporarily sets 'none' during renders, then restores — this gives it
-     the correct resting value to restore TO. */
-  .messages { overflow-anchor: auto !important; }
 
   /* Right panel also slides over */
   .rightpanel {

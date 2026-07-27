@@ -6,6 +6,7 @@ GTK3 + WebKit2 client with LunkserverManager-inspired dark theme.
 from __future__ import annotations
 
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -123,9 +124,11 @@ def play_sound(path: Path) -> None:
 # ── Git version check ──
 
 def check_git_update() -> bool:
-    """Returns True if remote has commits we don't have."""
+    """Returns True if remote has commits we don't have.
+    Uses BatchMode so SSH key passphrase prompts fail fast instead of hanging."""
     try:
-        subprocess.run(["git", "fetch", "-q"], cwd=REPO_DIR,
+        env = {**os.environ, "GIT_SSH_COMMAND": "ssh -o BatchMode=yes -o ConnectTimeout=5"}
+        subprocess.run(["git", "fetch", "-q"], cwd=REPO_DIR, env=env,
                        capture_output=True, timeout=10)
         result = subprocess.run(
             ["git", "rev-list", "HEAD..@{u}", "--count"],
