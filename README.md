@@ -16,16 +16,14 @@ The Hermes WebUI is a powerful web app (chat, tasks, kanban, skills, memory, ses
 ### CachyOS / Arch
 
 ```bash
-sudo pacman -S webkit2gtk-6.0 gtk4 libadwaita python-gobject
+sudo pacman -S webkit2gtk-4.1 gtk3 python-gobject
 ```
 
 ### Ubuntu / Debian
 
 ```bash
-sudo apt install gir1.6-webkit6-4.1 gir1.6-gtk-4.0 gir1.6-adw-1 python3-gi
+sudo apt install gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
 ```
-
-> **Note:** On Wayland (Hyprland), WebKitGTK's bubblewrap sandbox works natively. No extra setup needed.
 
 ## Quick Start
 
@@ -91,7 +89,7 @@ No configuration needed — the CSS adapts to whatever window size Hyprland give
 ## Architecture
 
 ```
-lunkagent.py              — GTK4 + WebKit6 client: creates window, injects theme, connects to URL
+lunkagent.py              — GTK3 + WebKit2 client: creates window, injects theme, connects to URL
 theme/lunkserver-dark.css — LunkserverManager design language via CSS variable overrides
 theme/vertical.css        — Portrait/half-height/tall monitor media queries
 run.sh                    — Dependency check + launcher
