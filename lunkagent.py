@@ -110,10 +110,13 @@ def normalize_url(url: str) -> str:
 # ── Sound ──
 
 def play_sound(path: Path) -> None:
-    """Play a WAV file. Tries paplay (PipeWire/PulseAudio), falls back to aplay."""
+    """Play a WAV file. Tries pw-cat (PipeWire), falls back to aplay."""
     if not path.exists():
         return
-    for cmd in (["paplay", str(path)], ["aplay", "-q", str(path)]):
+    for cmd in (
+        ["pw-cat", "--playback", str(path)],
+        ["aplay", "-q", str(path)],
+    ):
         try:
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return
@@ -121,19 +124,26 @@ def play_sound(path: Path) -> None:
             continue
 
 
-# ── Git version check ──
+# ── Version check via GitHub API (no SSH key needed) ──
+
+GITHUB_API = "https://api.github.com/repos/Jstowers1/lunkAgent/commits/main"
+
 
 def check_git_update() -> bool:
-    """Returns True if remote has commits we don't have.
-    Uses BatchMode so SSH key passphrase prompts fail fast instead of hanging."""
+    """Returns True if GitHub remote main has a commit we don't have locally.
+    Uses the public GitHub API over HTTPS — no SSH key or token required."""
     try:
-        env = {**os.environ, "GIT_SSH_COMMAND": "ssh -o BatchMode=yes -o ConnectTimeout=5"}
-        subprocess.run(["git", "fetch", "-q"], cwd=REPO_DIR, env=env,
-                       capture_output=True, timeout=10)
         result = subprocess.run(
-            ["git", "rev-list", "HEAD..@{u}", "--count"],
-            cwd=REPO_DIR, capture_output=True, text=True, timeout=5)
-        return int(result.stdout.strip()) > 0
+            ["git", "rev-parse", "HEAD"], cwd=REPO_DIR,
+            capture_output=True, text=True, timeout=5)
+        local_sha = result.stdout.strip()[:7]
+        if not local_sha:
+            return False
+        import urllib.request
+        req = urllib.request.Request(GITHUB_API, headers={"Accept": "application/vnd.github.v3.sha"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            remote_sha = resp.read().decode().strip()[:7]
+        return remote_sha != local_sha
     except Exception:
         return False
 
@@ -291,6 +301,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
 
         # Register message handler for native notifications (sound)
         ucom.register_script_message_handler("lunkNotify")
+        ucom.connect("script-message-received::lunkNotify", self._on_script_message)
 
         self._webview.connect("decide-policy", self._on_decide_policy)
         self._webview.connect("notify::title", self._on_title_notify)
@@ -298,6 +309,23 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
 
         self.add(self._webview)
         self.show_all()
+
+    def _on_script_message(self, ucom, js_result):
+        """Called when injected JS posts to the lunkNotify handler — play sound."""
+        try:
+            val = js_result.get_js_value()
+            s = val.to_string()
+            data = json.loads(s) if s.startswith("{") else {}
+            title = data.get("title", "").lower()
+            body = data.get("body", "").lower()
+            if "complete" in title or "response" in title:
+                play_sound(SOUND_COMPLETE)
+            elif "attention" in title or "approval" in title or "clarif" in body:
+                play_sound(SOUND_ATTENTION)
+            else:
+                play_sound(SOUND_COMPLETE)
+        except Exception:
+            play_sound(SOUND_COMPLETE)
 
     def _on_title_notify(self, webview, _param):
         """Play sound when title changes — the WebUI prefixes '●' for attention."""

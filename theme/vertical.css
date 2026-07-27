@@ -1,86 +1,66 @@
 /* ═══════════════════════════════════════════════════════════════════════
  * LunkAgent — Vertical / portrait monitor optimizations
  *
- * Targets: 1080×1920 full vertical, 1080×960 half-height, narrow windows.
- * Strategy: collapse sidebar into slide-in overlay (mirrors WebUI's 640px
- * mobile layout, but triggered by orientation/aspect-ratio instead).
+ * Triggered by JS class .lunk-vertical on <html> (added when
+ * window.innerHeight > window.innerWidth). We can't use CSS media queries
+ * because Wayland doesn't report rotated displays as portrait orientation.
  * ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Portrait / narrow: full overlay treatment ── */
-@media (orientation: portrait), (max-aspect-ratio: 9/10), (max-width: 700px) {
+/* ── Portrait (tall > wide): full vertical treatment ── */
+html.lunk-vertical .layout { overflow-x: clip; }
 
-  /* Prevent horizontal scroll caused by fixed sidebar in flex layout.
-     The WebUI does this at max-width:640px; we need it at any portrait width. */
-  .layout { overflow-x: clip; }
+/* Hide the icon rail entirely — hamburger + overlay sidebar covers all nav */
+html.lunk-vertical .rail { display: none !important; }
 
-  /* Hide the icon rail entirely — the hamburger + overlay sidebar covers all nav */
-  .rail { display: none !important; }
+/* Sidebar: off-canvas slide-in */
+html.lunk-vertical .sidebar {
+  position: fixed !important;
+  left: 0; top: 0; bottom: 0;
+  width: 280px !important;
+  max-width: 80vw !important;
+  z-index: 200 !important;
+  transform: translateX(-100%) !important;
+  transition: transform 0.25s ease !important;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
+}
+html.lunk-vertical .sidebar.mobile-open,
+html.lunk-vertical .sidebar.mobile-panel-drawer.mobile-open {
+  transform: translateX(0) !important;
+}
+html.lunk-vertical .sidebar .resize-handle { display: none !important; }
 
-  /* Sidebar: off-canvas slide-in */
-  .sidebar {
-    position: fixed !important;
-    left: 0; top: 0; bottom: 0;
-    width: 280px !important;
-    max-width: 80vw !important;
-    z-index: 200 !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.25s ease !important;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
-  }
-  .sidebar.mobile-open,
-  .sidebar.mobile-panel-drawer.mobile-open {
-    transform: translateX(0) !important;
-  }
-  .sidebar .resize-handle { display: none !important; }
+/* Show hamburger button */
+html.lunk-vertical .app-titlebar-hamburger,
+html.lunk-vertical .app-titlebar-spacer { display: flex !important; }
 
-  /* Show hamburger */
-  .app-titlebar-hamburger, .app-titlebar-spacer { display: flex !important; }
-
-  /* Dark backdrop overlay — the WebUI's own CSS hides .mobile-overlay.visible
-     with display:none, so we force it visible when sidebar is open. */
-  .mobile-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    background: rgba(0,0,0,0.5) !important;
-    z-index: 199 !important;
-  }
-  body:has(.sidebar.mobile-open) .mobile-overlay,
-  .mobile-overlay.visible {
-    display: block !important;
-  }
-  body:not(:has(.sidebar.mobile-open)) .mobile-overlay {
-    display: none !important;
-  }
-
-  /* Full width for content */
-  .messages-inner { max-width: 100% !important; padding: 16px !important; }
-  .composer-wrap { padding: 8px 12px 12px !important; }
-
-  /* Right panel also slides over */
-  .rightpanel {
-    position: fixed !important;
-    right: 0; top: 0; bottom: 0;
-    width: 280px !important;
-    max-width: 80vw !important;
-    z-index: 200 !important;
-    transform: translateX(100%) !important;
-    transition: transform 0.25s ease !important;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.4) !important;
-  }
-  .rightpanel.mobile-open { transform: translateX(0) !important; }
+/* Dark backdrop overlay */
+html.lunk-vertical .mobile-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.5) !important;
+  z-index: 199 !important;
+}
+html.lunk-vertical body:has(.sidebar.mobile-open) .mobile-overlay,
+html.lunk-vertical .mobile-overlay.visible {
+  display: block !important;
+}
+html.lunk-vertical body:not(:has(.sidebar.mobile-open)) .mobile-overlay {
+  display: none !important;
 }
 
-/* ── Narrow landscape (1080×960 half-height) ── */
-@media (orientation: landscape) and (max-width: 1100px) {
-  .sidebar { width: 220px !important; }
-  .sidebar .resize-handle { display: none !important; }
-  .composer-wrap { padding: 8px 12px 12px !important; }
-  .messages-inner { max-width: 100% !important; }
-}
+/* Full width for content */
+html.lunk-vertical .messages-inner { max-width: 100% !important; padding: 16px !important; }
+html.lunk-vertical .composer-wrap { padding: 8px 12px 12px !important; }
 
-/* ── Very tall windows (1080×1920 full vertical) ── */
-@media (min-height: 1400px) {
-  .messages-inner { max-width: 900px !important; }
-  .messages { padding-bottom: 32px !important; }
-  .composer-wrap { padding: 12px 20px 20px !important; }
+/* Right panel also slides over */
+html.lunk-vertical .rightpanel {
+  position: fixed !important;
+  right: 0; top: 0; bottom: 0;
+  width: 280px !important;
+  max-width: 80vw !important;
+  z-index: 200 !important;
+  transform: translateX(100%) !important;
+  transition: transform 0.25s ease !important;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.4) !important;
 }
+html.lunk-vertical .rightpanel.mobile-open { transform: translateX(0) !important; }
