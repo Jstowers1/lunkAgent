@@ -126,24 +126,37 @@ def play_sound(path: Path) -> None:
 
 # ── Version check via GitHub API (no SSH key needed) ──
 
+GITHUB_HTTPS = "https://github.com/Jstowers1/lunkAgent.git"
 GITHUB_API = "https://api.github.com/repos/Jstowers1/lunkAgent/commits/main"
 
 
-def check_git_update() -> bool:
-    """Returns True if GitHub remote main has a commit we don't have locally.
-    Uses the public GitHub API over HTTPS — no SSH key or token required."""
+def check_git_update() -> str | None:
+    """Returns the remote SHA if GitHub remote main has a commit we don't
+    have locally, else None. Uses the public GitHub API — no SSH key/token."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=REPO_DIR,
             capture_output=True, text=True, timeout=5)
-        local_sha = result.stdout.strip()[:7]
+        local_sha = result.stdout.strip()
         if not local_sha:
-            return False
+            return None
         import urllib.request
         req = urllib.request.Request(GITHUB_API, headers={"Accept": "application/vnd.github.v3.sha"})
         with urllib.request.urlopen(req, timeout=10) as resp:
-            remote_sha = resp.read().decode().strip()[:7]
-        return remote_sha != local_sha
+            remote_sha = resp.read().decode().strip()
+        return remote_sha if remote_sha != local_sha else None
+    except Exception:
+        return None
+
+
+def do_git_update() -> bool:
+    """Pull latest from GitHub over HTTPS (public repo, no auth needed).
+    Doesn't touch the SSH remote config — uses a one-shot HTTPS URL."""
+    try:
+        result = subprocess.run(
+            ["git", "pull", GITHUB_HTTPS, "main", "--ff-only"],
+            cwd=REPO_DIR, capture_output=True, text=True, timeout=30)
+        return result.returncode == 0
     except Exception:
         return False
 
@@ -393,8 +406,10 @@ class LunkAgentApp(Gtk.Application):
 
     def _check_updates_async(self):
         def _check():
-            if check_git_update():
-                GLib.idle_add(self._show_update_banner)
+            if check_git_update() is not None:
+                # Auto-pull over HTTPS, then prompt restart
+                if do_git_update():
+                    GLib.idle_add(self._show_update_banner)
             return False
         import threading
         t = threading.Thread(target=_check, daemon=True)
@@ -407,7 +422,7 @@ class LunkAgentApp(Gtk.Application):
             return
         for child in win.get_children():
             if isinstance(child, Gtk.Box):
-                banner = Gtk.Label(label="⟳ Update available — git pull to update")
+                banner = Gtk.Label(label="⟳ Updated — restart to apply")
                 banner.get_style_context().add_class("update-banner")
                 banner.set_halign(Gtk.Align.CENTER)
                 banner.set_margin_bottom(12)

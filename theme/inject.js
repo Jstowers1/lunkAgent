@@ -23,17 +23,10 @@
   _updatePortrait();
   window.addEventListener('resize', _updatePortrait);
 
-  // ── Auto-scroll: the WebUI's own _scrollPinned/_autoScrollFollow system
-  //    handles following the live tail. We don't add our own — two scroll
-  //    controllers fighting = visual freakout. Instead, just ensure the
-  //    scroll system knows we want to follow.
-  function _ensureScrollFollow() {
-    if (typeof _autoScrollFollow !== 'undefined') {
-      _autoScrollFollow = true;
-    }
-  }
-  _ensureScrollFollow();
-  setTimeout(_ensureScrollFollow, 3000);
+  // ── Auto-scroll: leave it entirely to the WebUI. It has its own
+  //    _scrollPinned / _autoScrollFollow system that respects user scroll
+  //    position. Touching it from here causes jitter and yanks users back
+  //    to bottom when they're trying to scroll up. Do nothing.
 
   // ── Bridge sendBrowserNotification to native for sound ──
   function _wrapNotify() {
