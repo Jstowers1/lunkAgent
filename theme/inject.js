@@ -8,12 +8,13 @@
   // ── Force dark mode ──
   document.documentElement.classList.add('dark');
 
-  // ── Portrait detection via JS, not media queries ──
-  // Wayland doesn't report rotated displays as "portrait" — the physical
-  // monitor is vertical but WebKit sees a landscape window.
+  // ── Portrait/narrow detection via JS, not media queries ──
+  // Wayland doesn't report rotated displays as "portrait". Also, half a
+  // vertical monitor (1080×960) is landscape aspect but still too narrow
+  // for the rail + sidebar side by side.
   function _updatePortrait() {
     var el = document.documentElement;
-    if (window.innerHeight > window.innerWidth) {
+    if (window.innerHeight > window.innerWidth || window.innerWidth < 700) {
       el.classList.add('lunk-vertical');
     } else {
       el.classList.remove('lunk-vertical');
@@ -22,32 +23,17 @@
   _updatePortrait();
   window.addEventListener('resize', _updatePortrait);
 
-  // ── Auto-scroll fallback ──
-  // The WebUI's own scroll-pinning logic can desync in our overlay layout.
-  // Watch the messages container for growth and snap to bottom if the user
-  // is near the bottom.
-  function _nearBottom() {
-    var m = document.getElementById('messages');
-    if (!m) return false;
-    return m.scrollHeight - m.scrollTop - m.clientHeight < 120;
+  // ── Auto-scroll: the WebUI's own _scrollPinned/_autoScrollFollow system
+  //    handles following the live tail. We don't add our own — two scroll
+  //    controllers fighting = visual freakout. Instead, just ensure the
+  //    scroll system knows we want to follow.
+  function _ensureScrollFollow() {
+    if (typeof _autoScrollFollow !== 'undefined') {
+      _autoScrollFollow = true;
+    }
   }
-  function _initScroll() {
-    var m = document.getElementById('messages');
-    if (!m) return;
-    var ro = new ResizeObserver(function() {
-      if (_nearBottom() && typeof scrollToBottom === 'function') {
-        scrollToBottom();
-      }
-    });
-    var inner = document.getElementById('messages-inner') || m;
-    ro.observe(inner);
-    ro.observe(m);
-  }
-  if (document.getElementById('messages')) {
-    _initScroll();
-  } else {
-    document.addEventListener('DOMContentLoaded', _initScroll);
-  }
+  _ensureScrollFollow();
+  setTimeout(_ensureScrollFollow, 3000);
 
   // ── Bridge sendBrowserNotification to native for sound ──
   function _wrapNotify() {

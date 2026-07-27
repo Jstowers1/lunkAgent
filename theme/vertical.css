@@ -33,6 +33,11 @@ html.lunk-vertical .sidebar .resize-handle { display: none !important; }
 html.lunk-vertical .app-titlebar-hamburger,
 html.lunk-vertical .app-titlebar-spacer { display: flex !important; }
 
+/* The WebUI hides .sidebar-nav at min-width:641px (rail has duplicate buttons).
+   Since we hide the rail, force sidebar-nav visible so nav tabs appear in the
+   overlay sidebar. */
+html.lunk-vertical .sidebar > .sidebar-nav { display: flex !important; }
+
 /* Dark backdrop overlay */
 html.lunk-vertical .mobile-overlay {
   position: fixed !important;
