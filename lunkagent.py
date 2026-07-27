@@ -17,7 +17,22 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-gi.require_version("WebKit2", "4.1")
+
+# Auto-detect WebKit2 typelib version — 4.1 preferred, 4.0 fallback.
+for _wk_ver in ("4.1", "4.0"):
+    try:
+        gi.require_version("WebKit2", _wk_ver)
+        break
+    except ValueError:
+        continue
+else:
+    print(
+        "ERROR: No WebKit2 typelib found.\n"
+        "  CachyOS: sudo pacman -S webkit2gtk-4.1  (or: webkit2gtk)\n"
+        "  Ubuntu:  sudo apt install gir1.2-webkit2-4.1",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 from gi.repository import Gdk, Gtk, WebKit2  # noqa: E402
 
