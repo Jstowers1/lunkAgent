@@ -1,0 +1,155 @@
+/*
+ * LunkAgent — Vertical/portrait monitor optimizations.
+ *
+ * Targets:
+ *   - 1080x1920 full vertical (aspect-ratio < 1.0)
+ *   - 1080x960 half-height vertical (still tall but width > height — handled
+ *     by the wider portrait breakpoint)
+ *
+ * Strategy: use CSS @media (orientation: portrait) and min-aspect-ratio
+ * queries to detect vertical monitors and restructure the layout.
+ * The WebUI already hides the icon rail on narrow viewports (<768px) —
+ * we take advantage of that by narrowing the effective width trigger.
+ *
+ * Also covers: tall windows that aren't strictly portrait but have
+ * aspect-ratio < 1.1 (most vertical monitor setups at half-height).
+ */
+
+/* ── Portrait / vertical: aspect-ratio < 1.0 ────────────────────────────────── */
+@media (orientation: portrait),
+       (max-aspect-ratio: 10/11) {
+
+  /* Narrow the session sidebar so chat gets maximum width. */
+  .sidebar {
+    width: 240px !important;
+    min-width: 240px !important;
+  }
+
+  /* If the window is very narrow, hide the rail and use the sidebar's
+     built-in mobile nav (which has icons in a row). */
+  .rail {
+    display: none !important;
+  }
+
+  /* Sidebar nav icons should stack vertically in portrait — they already
+     do in the WebUI's mobile layout. Ensure the sidebar isn't forced wide. */
+  .sidebar-nav {
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  /* Composer: full-width, less vertical padding to maximize message area. */
+  .composer-wrap {
+    padding: 8px 12px !important;
+  }
+
+  /* Messages: tighter side padding to use full width. */
+  .messages-inner {
+    padding: 8px 8px !important;
+  }
+
+  /* Empty state: center vertically and shrink for portrait. */
+  .empty-state {
+    padding: 20px 16px !important;
+  }
+  .empty-state .empty-logo svg {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  /* Suggestion grid: stack vertically in portrait. */
+  .suggestion-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Approval card: full-width in portrait. */
+  .approval-card {
+    max-width: 100% !important;
+    margin: 0 8px !important;
+  }
+
+  /* Kanban: horizontal scroll for columns instead of wrapping. */
+  .kanban-list {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Settings: stack the two-pane layout vertically. */
+  .settings-layout,
+  .settings-content {
+    flex-direction: column !important;
+  }
+  .settings-sidebar {
+    width: 100% !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* ── Half-height vertical: 1080x960 (aspect-ratio ~1.12, still tight) ───────── */
+@media (min-aspect-ratio: 10/11) and (max-aspect-ratio: 13/10) {
+  /* Slightly narrower sidebar for squarish windows. */
+  .sidebar {
+    width: 260px !important;
+    min-width: 260px !important;
+  }
+
+  /* Compact rail icons. */
+  .rail-btn {
+    padding: 6px !important;
+  }
+}
+
+/* ── Very tall and narrow: < 720px wide (phone-like vertical) ───────────────── */
+@media (max-width: 720px) {
+  /* Force mobile layout — WebUI already handles this but be explicit. */
+  .sidebar {
+    position: fixed !important;
+    z-index: 50 !important;
+  }
+
+  /* Make the titlebar compact. */
+  .app-titlebar {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  .app-titlebar-title {
+    font-size: 15px !important;
+  }
+
+  /* Composer sticks to bottom, full width. */
+  .composer-wrap {
+    padding: 6px 8px !important;
+  }
+  #msg {
+    font-size: 14px !important;
+  }
+}
+
+/* ── Tall window optimization (height > 1400px — typical 1920 vertical) ─────── */
+@media (min-height: 1400px) {
+  /* Use the extra vertical space — larger message area, comfortable spacing. */
+  .messages {
+    max-width: 900px !important;
+  }
+  .messages-inner {
+    padding: 16px 24px !important;
+  }
+
+  /* Empty state gets more breathing room. */
+  .empty-state {
+    padding: 40px 24px !important;
+  }
+  .empty-state h2 {
+    font-size: 24px !important;
+  }
+}
+
+/* ── Hyprland-specific: remove gaps and borders for tiled windows ──────────── */
+/* When tiled by Hyprland, the window has no decorations. Ensure no wasted
+   space around the WebView. */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}

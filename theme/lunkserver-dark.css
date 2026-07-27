@@ -1,0 +1,181 @@
+/*
+ * LunkAgent — LunkserverManager-inspired dark theme for Hermes WebUI.
+ *
+ * Matches the LunkserverManager design language:
+ *   - bg-gray-900 / text-gray-200 base palette
+ *   - JetBrainsMono Nerd Font throughout
+ *   - blue-400 accents (replacing Hermes' gold)
+ *   - border-gray-800 dividers
+ *   - thin 6px scrollbars with rounded thumb
+ *   - rounded-lg card corners
+ *
+ * This overrides the WebUI's CSS variables (--bg, --sidebar, --accent, etc.)
+ * with !important to win over the default :root.dark theme.
+ */
+
+/* ── Dark palette: LunkserverManager gray-900 base ─────────────────────────── */
+:root,
+:root.dark {
+  --bg: #111827 !important;           /* gray-900 */
+  --sidebar: #0f172a !important;      /* slightly darker than main, slate-900 */
+  --border: #1f2937 !important;       /* gray-800 */
+  --border2: rgba(255, 255, 255, 0.08) !important;
+  --text: #e5e7eb !important;         /* gray-200 */
+  --muted: #9ca3af !important;        /* gray-400 */
+  --strong: #f3f4f6 !important;       /* gray-100 */
+  --em: #9ca3af !important;
+
+  /* Blue accent replaces Hermes gold — matches LunkserverManager blue-400 */
+  --accent: #60a5fa !important;       /* blue-400 */
+  --accent-hover: #3b82f6 !important; /* blue-500 */
+  --accent-bg: rgba(96, 165, 250, 0.08) !important;
+  --accent-bg-strong: rgba(96, 165, 250, 0.15) !important;
+  --accent-text: #60a5fa !important;
+  --blue: #60a5fa !important;
+  --gold: #3b82f6 !important;
+  --focus-ring: rgba(96, 165, 250, 0.35) !important;
+  --focus-glow: rgba(96, 165, 250, 0.1) !important;
+
+  --surface: #1f2937 !important;      /* gray-800 */
+  --surface-subtle: rgba(255, 255, 255, 0.03) !important;
+  --surface-subtle-hover: rgba(255, 255, 255, 0.06) !important;
+  --topbar-bg: rgba(15, 23, 42, 0.98) !important;  /* slate-900 */
+  --main-bg: rgba(17, 24, 39, 0.5) !important;     /* gray-900 */
+  --input-bg: rgba(255, 255, 255, 0.05) !important;
+  --hover-bg: rgba(255, 255, 255, 0.07) !important;
+  --code-bg: #0f172a !important;
+  --code-inline-bg: rgba(0, 0, 0, 0.3) !important;
+  --code-text: #93c5fd !important;    /* blue-300 */
+  --pre-text: #e2e8f0 !important;
+  --border-subtle: rgba(255, 255, 255, 0.06) !important;
+  --border-muted: rgba(255, 255, 255, 0.1) !important;
+
+  /* Status colors — LunkserverManager emerald/amber/red */
+  --error: #ef4444 !important;        /* red-500 */
+  --success: #10b981 !important;      /* emerald-500 */
+  --warning: #f59e0b !important;      /* amber-500 */
+  --info: #60a5fa !important;         /* blue-400 */
+
+  /* Fonts: LunkserverManager uses JetBrainsMono Nerd Font */
+  --font-ui: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace,
+    SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+
+  /* User message bubble — subtle blue tint */
+  --user-bubble-bg: rgba(96, 165, 250, 0.08) !important;
+  --user-bubble-border: rgba(96, 165, 250, 0.2) !important;
+  --user-bubble-text: #e5e7eb !important;
+  --user-bubble-placeholder: #6b7280 !important;
+  --user-selection-bg: rgba(96, 165, 250, 0.2) !important;
+  --user-selection-text: #f3f4f6 !important;
+}
+
+/* ── Scrollbar: LunkserverManager sleek minimalist ─────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #374151 !important;  /* gray-700 */
+  border-radius: 999px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280 !important;  /* gray-500 */
+}
+
+/* ── Body: apply font + background ──────────────────────────────────────────── */
+body {
+  font-family: var(--font-ui) !important;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Titlebar: match LunkserverManager header weight ───────────────────────── */
+.app-titlebar {
+  background: var(--topbar-bg) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.app-titlebar-title {
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ── Rail (icon nav): subtle separator ─────────────────────────────────────── */
+.rail {
+  border-right: 1px solid var(--border) !important;
+}
+.rail-btn.nav-tab.active {
+  color: var(--accent) !important;
+}
+
+/* ── Session list items: rounded hover like LunkserverManager ──────────────── */
+.session-item {
+  border-radius: 8px !important;
+}
+.session-item:hover {
+  background: var(--hover-bg) !important;
+}
+.session-item.active {
+  background: var(--accent-bg) !important;
+  border: 1px solid rgba(96, 165, 250, 0.2) !important;
+}
+
+/* ── Inputs: match LunkserverManager input styling ─────────────────────────── */
+input[type="text"],
+input[type="search"],
+textarea,
+select {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  color: var(--text) !important;
+  font-family: var(--font-ui) !important;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent) !important;
+  outline: none !important;
+}
+
+/* ── Buttons: match LunkserverManager rounded buttons ──────────────────────── */
+.btn.primary {
+  background: var(--accent) !important;
+  color: #0f172a !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+.btn.primary:hover {
+  background: var(--accent-hover) !important;
+}
+.btn.secondary {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+
+/* ── Sidebar search: LunkserverManager-style search bar ────────────────────── */
+.sidebar-search input {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+}
+
+/* ── Code blocks: match LunkserverManager code aesthetic ───────────────────── */
+pre {
+  background: #0f172a !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+pre code {
+  font-family: var(--font-ui) !important;
+}
+code {
+  font-family: var(--font-ui) !important;
+  color: var(--code-text) !important;
+}

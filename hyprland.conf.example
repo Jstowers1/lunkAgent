@@ -1,0 +1,17 @@
+# LunkAgent Hyprland window rules — add to your ~/.config/hypr/hyprland.conf
+#
+# These rules make LunkAgent tile nicely and support vertical monitors.
+# Adjust monitor names and layout to match your setup.
+
+# Window class matches the GTK application_id
+windowrulev2 = float, class:^(dev.lunkman.LunkAgent)$
+
+# For vertical monitors: force the app to open on the portrait display.
+# Replace DP-2 with your vertical monitor's name (use `hyprctl monitors`).
+# windowrulev2 = monitor DP-2, class:^(dev.lunkman.LunkAgent)$
+
+# Optional: open in fullscreen on vertical monitors
+# windowrulev2 = fullscreen, class:^(dev.lunkman.LunkAgent)$
+
+# Optional: open as a tiled window (remove the float rule above)
+# windowrulev2 = tile, class:^(dev.lunkman.LunkAgent)$

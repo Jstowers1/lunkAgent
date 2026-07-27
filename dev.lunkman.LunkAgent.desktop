@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=LunkAgent
+Comment=Native Hermes WebUI client
+Exec=lunkagent
+Icon=lunkagent
+Categories=Network;Utility;
+Terminal=false
+StartupWMClass=dev.lunkman.LunkAgent
+Keywords=hermes;ai;chat;webui;
