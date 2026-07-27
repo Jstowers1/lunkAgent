@@ -1,25 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════════════
  * LunkAgent — Vertical / portrait monitor optimizations
  *
- * Targets:
- *   - 1080×1920 full vertical (portrait, aspect-ratio < 1.0)
- *   - 1080×960 half-height vertical (tall but landscape)
- *   - Narrow windows generally (< 700px wide)
- *
- * Strategy: When the window is portrait or narrow, collapse the sidebar
- * into a slide-in overlay (same as the WebUI's mobile layout at 640px).
+ * Targets: 1080×1920 full vertical, 1080×960 half-height, narrow windows.
+ * Strategy: collapse sidebar into slide-in overlay (mirrors WebUI's 640px
+ * mobile layout, but triggered by orientation/aspect-ratio instead).
  * ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Portrait (tall > wide): full vertical monitor treatment ── */
-@media (orientation: portrait), (max-aspect-ratio: 9/10) {
+/* ── Portrait / narrow: full overlay treatment ── */
+@media (orientation: portrait), (max-aspect-ratio: 9/10), (max-width: 700px) {
 
-  /* Make sidebar a slide-in overlay, hidden by default.
-     This frees the full width for chat content. */
+  /* Prevent horizontal scroll caused by fixed sidebar in flex layout.
+     The WebUI does this at max-width:640px; we need it at any portrait width. */
+  .layout { overflow-x: clip; }
+
+  /* Sidebar: off-canvas slide-in */
   .sidebar {
     position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
+    left: 0; top: 0; bottom: 0;
     width: 280px !important;
     max-width: 80vw !important;
     z-index: 200 !important;
@@ -31,36 +28,43 @@
   .sidebar.mobile-panel-drawer.mobile-open {
     transform: translateX(0) !important;
   }
-
-  /* Hide the resize handle on overlay sidebar */
   .sidebar .resize-handle { display: none !important; }
 
-  /* Show the hamburger button so users can toggle the sidebar */
-  .app-titlebar-hamburger { display: flex !important; }
-  .app-titlebar-spacer { display: flex !important; }
+  /* Show hamburger */
+  .app-titlebar-hamburger, .app-titlebar-spacer { display: flex !important; }
 
-  /* Backdrop overlay when sidebar is open */
+  /* Dark backdrop overlay — the WebUI's own CSS hides .mobile-overlay.visible
+     with display:none, so we force it visible when sidebar is open. */
   .mobile-overlay {
-    display: none !important;
     position: fixed !important;
     inset: 0 !important;
     background: rgba(0,0,0,0.5) !important;
     z-index: 199 !important;
   }
-  body:has(.sidebar.mobile-open) .mobile-overlay { display: block !important; }
+  body:has(.sidebar.mobile-open) .mobile-overlay,
+  .mobile-overlay.visible {
+    display: block !important;
+  }
+  body:not(:has(.sidebar.mobile-open)) .mobile-overlay {
+    display: none !important;
+  }
 
-  /* Messages can use full width since sidebar is overlay */
+  /* Full width for content */
   .messages-inner { max-width: 100% !important; padding: 16px !important; }
-
-  /* Composer gets full width */
   .composer-wrap { padding: 8px 12px 12px !important; }
 
-  /* Right panel: also slide-over on portrait */
+  /* Fix auto-scroll jank: force overflow-anchor:auto so the browser holds
+     scroll position during streaming content growth. Desktop CSS disables
+     this (overflow-anchor:none), but our portrait viewport is desktop-width,
+     so we must re-enable it manually. The WebUI's own _fixMobileScrollJank
+     temporarily sets 'none' during renders, then restores — this gives it
+     the correct resting value to restore TO. */
+  .messages { overflow-anchor: auto !important; }
+
+  /* Right panel also slides over */
   .rightpanel {
     position: fixed !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
+    right: 0; top: 0; bottom: 0;
     width: 280px !important;
     max-width: 80vw !important;
     z-index: 200 !important;
@@ -71,42 +75,17 @@
   .rightpanel.mobile-open { transform: translateX(0) !important; }
 }
 
-/* ── Narrow landscape (half-height vertical, 1080×960 etc.) ── */
+/* ── Narrow landscape (1080×960 half-height) ── */
 @media (orientation: landscape) and (max-width: 1100px) {
-
-  /* Narrow the sidebar from 300px to 220px to give more room to content */
   .sidebar { width: 220px !important; }
   .sidebar .resize-handle { display: none !important; }
-
-  /* Tighten the composer padding */
   .composer-wrap { padding: 8px 12px 12px !important; }
-
-  /* Messages get more of the width */
   .messages-inner { max-width: 100% !important; }
 }
 
-/* ── Very tall windows (full vertical 1080×1920) ── */
+/* ── Very tall windows (1080×1920 full vertical) ── */
 @media (min-height: 1400px) {
   .messages-inner { max-width: 900px !important; }
   .messages { padding-bottom: 32px !important; }
   .composer-wrap { padding: 12px 20px 20px !important; }
-}
-
-/* ── Ultra-narrow (< 700px wide, landscape) ── */
-@media (max-width: 700px) {
-  .sidebar {
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 280px !important;
-    max-width: 80vw !important;
-    z-index: 200 !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.25s ease !important;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
-  }
-  .sidebar.mobile-open { transform: translateX(0) !important; }
-  .sidebar .resize-handle { display: none !important; }
-  .app-titlebar-hamburger { display: flex !important; }
 }

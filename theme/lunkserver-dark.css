@@ -51,6 +51,10 @@ html { color-scheme: dark; }
   --user-bubble-border: rgba(59,130,244,0.12) !important;
   --user-bubble-text: #e5e7eb !important;
   --user-bubble-placeholder: #9ca3af !important;
+
+  /* LunkserverManager design language: JetBrainsMono Nerd Font everywhere */
+  --font-ui: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace !important;
 }
 
 /* ── Structural elements: titlebar, rail, sidebar, composer ── */
@@ -66,6 +70,12 @@ html { color-scheme: dark; }
 /* ── Main content background ── */
 .main {
   background: var(--main-bg) !important;
+}
+
+/* ── LunkserverManager font everywhere ── */
+body, input, textarea, select, button,
+.msg-body, .session-item, .app-titlebar-title {
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace !important;
 }
 
 /* ── Composer box: the text input area ── */
