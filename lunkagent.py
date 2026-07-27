@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
 LunkAgent — Native Hermes WebUI client for CachyOS / Hyprland (Wayland).
-
-GTK3 + WebKit2 client. Server URL stored in ~/.config/lunkagent/config.json.
-First run shows a setup screen; subsequent runs connect directly.
-Injects a LunkserverManager-inspired dark theme and vertical monitor CSS.
+GTK3 + WebKit2 client with LunkserverManager-inspired dark theme.
 """
 from __future__ import annotations
 
 import json
 import signal
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -26,15 +24,12 @@ for _wk_ver in ("4.1", "4.0"):
     except ValueError:
         continue
 else:
-    print(
-        "ERROR: No WebKit2 typelib found.\n"
-        "  CachyOS: sudo pacman -S webkit2gtk-4.1\n"
-        "  Ubuntu:  sudo apt install gir1.2-webkit2-4.1",
-        file=sys.stderr,
-    )
+    print("ERROR: No WebKit2 typelib found.\n"
+          "  CachyOS: sudo pacman -S webkit2gtk-4.1\n"
+          "  Ubuntu:  sudo apt install gir1.2-webkit2-4.1", file=sys.stderr)
     sys.exit(1)
 
-from gi.repository import Gdk, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 APP_ID = "dev.lunkman.LunkAgent"
 APP_NAME = "LunkAgent"
@@ -44,6 +39,8 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 THEME_CSS = REPO_DIR / "theme" / "lunkserver-dark.css"
 VERTICAL_CSS = REPO_DIR / "theme" / "vertical.css"
 INJECT_JS = REPO_DIR / "theme" / "inject.js"
+SOUND_COMPLETE = REPO_DIR / "sounds" / "complete.wav"
+SOUND_ATTENTION = REPO_DIR / "sounds" / "attention.wav"
 
 GTK_CSS = b"""
 window { background: #111827; }
@@ -66,17 +63,19 @@ button.switch {
   border-radius: 6px; padding: 6px 12px; font-size: 12px;
 }
 button.switch:hover { background: #1f2937; }
-button.icon-btn {
-  background: transparent; color: #9ca3af; border: none; border-radius: 4px;
-  padding: 4px 8px; font-size: 12px;
+button.menu-item {
+  background: transparent; color: #e5e7eb; border: none; border-radius: 4px;
+  padding: 8px 16px; font-size: 13px;
 }
-button.icon-btn:hover { background: #1f2937; color: #e5e7eb; }
-headerbar {
-  background: #1f2937; border-bottom: 1px solid #374151;
-  padding: 2px 8px;
+button.menu-item:hover { background: #374151; }
+label.update-banner {
+  background: #1f2937; color: #fbbf24; border: 1px solid #374151;
+  border-radius: 6px; padding: 6px 12px; font-size: 12px;
 }
 """
 
+
+# ── Config ──
 
 def load_config() -> dict:
     try:
@@ -107,6 +106,37 @@ def normalize_url(url: str) -> str:
     return url.rstrip("/")
 
 
+# ── Sound ──
+
+def play_sound(path: Path) -> None:
+    """Play a WAV file. Tries paplay (PipeWire/PulseAudio), falls back to aplay."""
+    if not path.exists():
+        return
+    for cmd in (["paplay", str(path)], ["aplay", "-q", str(path)]):
+        try:
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except FileNotFoundError:
+            continue
+
+
+# ── Git version check ──
+
+def check_git_update() -> bool:
+    """Returns True if remote has commits we don't have."""
+    try:
+        subprocess.run(["git", "fetch", "-q"], cwd=REPO_DIR,
+                       capture_output=True, timeout=10)
+        result = subprocess.run(
+            ["git", "rev-list", "HEAD..@{u}", "--count"],
+            cwd=REPO_DIR, capture_output=True, text=True, timeout=5)
+        return int(result.stdout.strip()) > 0
+    except Exception:
+        return False
+
+
+# ── Window ──
+
 class LunkAgentWindow(Gtk.ApplicationWindow):
 
     def __init__(self, *args, **kwargs):
@@ -115,14 +145,13 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._vertical_css = ""
         self._url = None
         self._webview = None
+        self._last_notify_title = None
 
     def start(self, theme_css: str, vertical_css: str):
         self._theme_css = theme_css
         self._vertical_css = vertical_css
         self.set_title(APP_NAME)
         self.set_default_size(1280, 800)
-
-        # Ctrl+L → switch server, Ctrl+R → reload, Ctrl+Q → quit
         self.connect("key-press-event", self._on_keypress)
 
         cfg = load_config()
@@ -204,7 +233,6 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self.add(outer)
         self.show_all()
         if not servers:
-            # Auto-focus the entry on first run.
             entry.grab_focus()
 
     def _on_connect(self, text: str):
@@ -241,8 +269,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                     source=combined,
                     injected_frames=WebKit2.UserContentInjectedFrames.ALL_FRAMES,
                     level=WebKit2.UserStyleLevel.USER,
-                    allow_list=None,
-                    block_list=None,
+                    allow_list=None, block_list=None,
                 )
             )
 
@@ -255,50 +282,30 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                     source=js,
                     injected_frames=WebKit2.UserContentInjectedFrames.ALL_FRAMES,
                     injection_time=WebKit2.UserScriptInjectionTime.END,
-                    allow_list=None,
-                    block_list=None,
+                    allow_list=None, block_list=None,
                 )
             )
 
+        # Register message handler for native notifications (sound)
+        ucom.register_script_message_handler("lunkNotify")
+
         self._webview.connect("decide-policy", self._on_decide_policy)
+        self._webview.connect("notify::title", self._on_title_notify)
         self._webview.load_uri(url)
 
-        # Thin toolbar: switch button on left, URL on right.
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        bar.get_style_context().add_class("headerbar")
-        bar.set_margin_start(4)
-        bar.set_margin_end(4)
-        bar.set_margin_top(2)
-        bar.set_margin_bottom(2)
-
-        switch_btn = Gtk.Button(label="⇄")
-        switch_btn.get_style_context().add_class("icon-btn")
-        switch_btn.set_tooltip_text("Switch server (Ctrl+L)")
-        switch_btn.connect("clicked", lambda w: self.show_setup())
-        bar.pack_start(switch_btn, False, False, 0)
-
-        reload_btn = Gtk.Button(label="⟳")
-        reload_btn.get_style_context().add_class("icon-btn")
-        reload_btn.set_tooltip_text("Reload (Ctrl+R)")
-        reload_btn.connect("clicked", lambda w: self._webview.reload())
-        bar.pack_start(reload_btn, False, False, 0)
-
-        spacer = Gtk.Box()
-        bar.pack_start(spacer, True, True, 0)
-
-        url_label = Gtk.Label(label=url)
-        url_label.get_style_context().add_class("subtitle")
-        url_label.set_margin_end(8)
-        url_label.set_max_width_chars(50)
-        url_label.set_ellipsize(3)  # PANGO_ELLIPSIZE_END
-        bar.pack_end(url_label, False, False, 0)
-
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        vbox.pack_start(bar, False, False, 0)
-        vbox.pack_start(self._webview, True, True, 0)
-
-        self.add(vbox)
+        self.add(self._webview)
         self.show_all()
+
+    def _on_title_notify(self, webview, _param):
+        """Play sound when title changes — the WebUI prefixes '●' for attention."""
+        title = webview.get_title() or ""
+
+        # '●' prefix = session needs attention (approval, clarification, or done)
+        if title.startswith("\u25CF") and self._last_notify_title != title:
+            self._last_notify_title = title
+            play_sound(SOUND_ATTENTION)
+        elif not title.startswith("\u25CF"):
+            self._last_notify_title = None
 
     def _on_decide_policy(self, webview, decision, decision_type):
         if decision_type == WebKit2.PolicyDecisionType.NAVIGATION_ACTION:
@@ -322,43 +329,75 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
             child.destroy()
 
 
+# ── App ──
+
 class LunkAgentApp(Gtk.Application):
-    def __init__(self, theme_css, vertical_css, fullscreen):
+    def __init__(self, theme_css, vertical_css, fullscreen, no_sound):
         super().__init__(application_id=APP_ID, register_session=True)
         self._theme_css = theme_css
         self._vertical_css = vertical_css
         self._fullscreen = fullscreen
+        self._no_sound = no_sound
         self._window = None
 
     def do_activate(self):
         provider = Gtk.CssProvider()
         provider.load_from_data(GTK_CSS)
         Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-        )
+            Gdk.Screen.get_default(), provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         if self._window:
             self._window.present()
             return
         self._window = LunkAgentWindow(application=self)
-        self._window.start(theme_css=self._theme_css, vertical_css=self._vertical_css)
+        self._window.start(theme_css=self._theme_css,
+                           vertical_css=self._vertical_css)
         if self._fullscreen:
             self._window.fullscreen()
 
+        # Check for git updates in background
+        if (REPO_DIR / ".git").exists():
+            self._check_updates_async()
+
+    def _check_updates_async(self):
+        def _check():
+            if check_git_update():
+                GLib.idle_add(self._show_update_banner)
+            return False
+        import threading
+        t = threading.Thread(target=_check, daemon=True)
+        t.start()
+
+    def _show_update_banner(self):
+        # ponytail: simple label at top of setup screen, not a modal dialog
+        win = self._window
+        if not win:
+            return
+        for child in win.get_children():
+            if isinstance(child, Gtk.Box):
+                banner = Gtk.Label(label="⟳ Update available — git pull to update")
+                banner.get_style_context().add_class("update-banner")
+                banner.set_halign(Gtk.Align.CENTER)
+                banner.set_margin_bottom(12)
+                child.pack_start(banner, False, False, 0)
+                child.reorder_child(banner, 0)
+                win.show_all()
+                break
+
 
 def main():
-    # Argparse removed — no CLI args needed. Flags handled by sys.argv filter.
     no_theme = "--no-theme" in sys.argv
     fullscreen = "--fullscreen" in sys.argv
+    no_sound = "--no-sound" in sys.argv
 
     theme_css = "" if no_theme else read_text(THEME_CSS)
     vertical_css = read_text(VERTICAL_CSS)
 
     sys.argv = [sys.argv[0]]
 
-    app = LunkAgentApp(theme_css=theme_css, vertical_css=vertical_css, fullscreen=fullscreen)
+    app = LunkAgentApp(theme_css=theme_css, vertical_css=vertical_css,
+                       fullscreen=fullscreen, no_sound=no_sound)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.run(sys.argv)
 

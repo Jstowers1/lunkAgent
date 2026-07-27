@@ -53,9 +53,16 @@ ssh -N -L 8787:127.0.0.1:8787 user@remote-host &
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl+L` | Switch server (back to setup screen) |
-| `Ctrl+R` | Reload current page |
-| `Ctrl+Q` | Quit |
+| `Ctrl+L` | Switch server |
+| `Ctrl+R` | Reload |
+
+### Notification Sounds
+
+LunkAgent plays a sound when an agent finishes a task or needs your input (approval/clarification). This works by bridging the WebUI's `sendBrowserNotification` calls to native audio. Disable with `--no-sound`.
+
+### Update Detection
+
+If the repo has a git remote configured, LunkAgent checks for new commits on startup and shows a banner on the setup screen. Pull with `git pull`.
 
 ## Hyprland Configuration
 
@@ -87,10 +94,12 @@ No configuration needed — the CSS adapts to whatever window size Hyprland give
 ## Architecture
 
 ```
-lunkagent.py              — GTK3 + WebKit2 client: window, theme/JS injection, server config
+lunkagent.py              — GTK3 + WebKit2 client: window, theme/JS injection, sound, git update check
 theme/lunkserver-dark.css — LunkserverManager design language via CSS variable overrides
 theme/vertical.css        — Portrait/half-height/tall monitor media queries
-theme/inject.js           — Force dark mode + portrait sidebar hamburger toggle
+theme/inject.js           — Force dark mode + notification bridge to native
+sounds/complete.wav       — Chime played on task completion
+sounds/attention.wav      — Tone played when attention needed
 run.sh                    — Launcher
 ```
 

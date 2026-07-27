@@ -1,84 +1,48 @@
-/* LunkAgent — injected JS for portrait sidebar toggle + dark mode enforcement.
-   Runs on every navigation via WebKit2 UserScript (END of document). */
+/* LunkAgent — injected JS.
+   Runs on every navigation via WebKit2 UserScript (END of document).
+   Does NOT touch the hamburger — the WebUI's own onclick="toggleMobileSidebar()"
+   handles it. We only show the button via CSS (vertical.css).
+*/
 
 (function() {
   'use strict';
 
   // ── Force dark mode ──
-  var root = document.documentElement;
-  root.classList.add('dark');
+  document.documentElement.classList.add('dark');
 
-  // ── Portrait sidebar toggle ──
-  // The WebUI's own hamburger only works at <640px. We extend it to portrait.
-  function setupPortraitSidebar() {
-    var hamburger = document.querySelector('.app-titlebar-hamburger');
-    var sidebar = document.querySelector('.sidebar');
-    var overlay = document.querySelector('.mobile-overlay');
+  // ── Bridge sendBrowserNotification to native for sound playback ──
+  // The WebUI calls this for: response complete, approval needed, clarification needed.
+  // We wrap it to post a message to the native handler before the original runs.
+  if (typeof sendBrowserNotification === 'function' && !window._lunkNotifyWrapped) {
+    window._lunkNotifyWrapped = true;
+    var _origNotify = sendBrowserNotification;
+    sendBrowserNotification = function(title, body, options) {
+      try {
+        window.webkit.messageHandlers.lunkNotify.postMessage(
+          { title: title || '', body: body || '' }
+        );
+      } catch(_) {}
+      return _origNotify.apply(this, arguments);
+    };
+  }
 
-    if (!hamburger || !sidebar) return;
-
-    // Show hamburger in portrait/narrow
-    function isPortrait() {
-      return window.matchMedia('(orientation: portrait), (max-aspect-ratio: 9/10), (max-width: 700px)').matches;
+  // ── Also watch title for ● prefix (attention indicator) ──
+  var _titleObserver = new MutationObserver(function() {
+    var t = document.title || '';
+    if (t.startsWith('\u25CF')) {
+      try {
+        window.webkit.messageHandlers.lunkNotify.postMessage(
+          { title: 'attention', body: t.replace(/^\u25CF\s*/, '') }
+        );
+      } catch(_) {}
     }
-
-    function toggleSidebar() {
-      var isOpen = sidebar.classList.contains('mobile-open');
-      if (isOpen) {
-        sidebar.classList.remove('mobile-open', 'mobile-panel-drawer');
-        if (overlay) overlay.classList.remove('visible');
-      } else {
-        sidebar.classList.add('mobile-open');
-        if (overlay) overlay.classList.add('visible');
-      }
-    }
-
-    // Wire up hamburger — but only our handler, avoid double-binding
-    if (!hamburger.dataset.lunkPortrait) {
-      hamburger.dataset.lunkPortrait = '1';
-      hamburger.addEventListener('click', function(e) {
-        if (isPortrait()) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleSidebar();
-        }
-      });
-    }
-
-    // Wire up overlay click to close
-    if (overlay && !overlay.dataset.lunkPortrait) {
-      overlay.dataset.lunkPortrait = '1';
-      overlay.addEventListener('click', function() {
-        sidebar.classList.remove('mobile-open', 'mobile-panel-drawer');
-        overlay.classList.remove('visible');
-      });
-      // Make overlay actually show
-      overlay.style.display = '';
-    }
-
-    // Close sidebar on navigation/session change
-    document.querySelectorAll('.session-item').forEach(function(item) {
-      if (!item.dataset.lunkPortrait) {
-        item.dataset.lunkPortrait = '1';
-        item.addEventListener('click', function() {
-          if (isPortrait()) {
-            setTimeout(function() {
-              sidebar.classList.remove('mobile-open', 'mobile-panel-drawer');
-              if (overlay) overlay.classList.remove('visible');
-            }, 100);
-          }
-        });
-      }
+  });
+  if (document.querySelector('title')) {
+    _titleObserver.observe(document.querySelector('title'), { childList: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      var titleEl = document.querySelector('title');
+      if (titleEl) _titleObserver.observe(titleEl, { childList: true });
     });
   }
-
-  // Run after DOM is ready, and again after any dynamic content loads.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupPortraitSidebar);
-  } else {
-    setupPortraitSidebar();
-  }
-  // Re-run periodically to catch dynamically loaded session items.
-  // ponytail: polling at 2s — cheap, catches SPA re-renders without MutationObserver.
-  setInterval(setupPortraitSidebar, 2000);
 })();
