@@ -1,155 +1,112 @@
-/*
- * LunkAgent — Vertical/portrait monitor optimizations.
+/* ═══════════════════════════════════════════════════════════════════════
+ * LunkAgent — Vertical / portrait monitor optimizations
  *
  * Targets:
- *   - 1080x1920 full vertical (aspect-ratio < 1.0)
- *   - 1080x960 half-height vertical (still tall but width > height — handled
- *     by the wider portrait breakpoint)
+ *   - 1080×1920 full vertical (portrait, aspect-ratio < 1.0)
+ *   - 1080×960 half-height vertical (tall but landscape)
+ *   - Narrow windows generally (< 700px wide)
  *
- * Strategy: use CSS @media (orientation: portrait) and min-aspect-ratio
- * queries to detect vertical monitors and restructure the layout.
- * The WebUI already hides the icon rail on narrow viewports (<768px) —
- * we take advantage of that by narrowing the effective width trigger.
- *
- * Also covers: tall windows that aren't strictly portrait but have
- * aspect-ratio < 1.1 (most vertical monitor setups at half-height).
- */
+ * Strategy: When the window is portrait or narrow, collapse the sidebar
+ * into a slide-in overlay (same as the WebUI's mobile layout at 640px).
+ * ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Portrait / vertical: aspect-ratio < 1.0 ────────────────────────────────── */
-@media (orientation: portrait),
-       (max-aspect-ratio: 10/11) {
+/* ── Portrait (tall > wide): full vertical monitor treatment ── */
+@media (orientation: portrait), (max-aspect-ratio: 9/10) {
 
-  /* Narrow the session sidebar so chat gets maximum width. */
-  .sidebar {
-    width: 240px !important;
-    min-width: 240px !important;
-  }
-
-  /* If the window is very narrow, hide the rail and use the sidebar's
-     built-in mobile nav (which has icons in a row). */
-  .rail {
-    display: none !important;
-  }
-
-  /* Sidebar nav icons should stack vertically in portrait — they already
-     do in the WebUI's mobile layout. Ensure the sidebar isn't forced wide. */
-  .sidebar-nav {
-    flex-direction: column !important;
-    gap: 2px !important;
-  }
-
-  /* Composer: full-width, less vertical padding to maximize message area. */
-  .composer-wrap {
-    padding: 8px 12px !important;
-  }
-
-  /* Messages: tighter side padding to use full width. */
-  .messages-inner {
-    padding: 8px 8px !important;
-  }
-
-  /* Empty state: center vertically and shrink for portrait. */
-  .empty-state {
-    padding: 20px 16px !important;
-  }
-  .empty-state .empty-logo svg {
-    width: 56px !important;
-    height: 56px !important;
-  }
-
-  /* Suggestion grid: stack vertically in portrait. */
-  .suggestion-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Approval card: full-width in portrait. */
-  .approval-card {
-    max-width: 100% !important;
-    margin: 0 8px !important;
-  }
-
-  /* Kanban: horizontal scroll for columns instead of wrapping. */
-  .kanban-list {
-    overflow-x: auto !important;
-    flex-wrap: nowrap !important;
-  }
-
-  /* Settings: stack the two-pane layout vertically. */
-  .settings-layout,
-  .settings-content {
-    flex-direction: column !important;
-  }
-  .settings-sidebar {
-    width: 100% !important;
-    max-height: 200px !important;
-    overflow-y: auto !important;
-  }
-}
-
-/* ── Half-height vertical: 1080x960 (aspect-ratio ~1.12, still tight) ───────── */
-@media (min-aspect-ratio: 10/11) and (max-aspect-ratio: 13/10) {
-  /* Slightly narrower sidebar for squarish windows. */
-  .sidebar {
-    width: 260px !important;
-    min-width: 260px !important;
-  }
-
-  /* Compact rail icons. */
-  .rail-btn {
-    padding: 6px !important;
-  }
-}
-
-/* ── Very tall and narrow: < 720px wide (phone-like vertical) ───────────────── */
-@media (max-width: 720px) {
-  /* Force mobile layout — WebUI already handles this but be explicit. */
+  /* Make sidebar a slide-in overlay, hidden by default.
+     This frees the full width for chat content. */
   .sidebar {
     position: fixed !important;
-    z-index: 50 !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 80vw !important;
+    z-index: 200 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s ease !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
+  }
+  .sidebar.mobile-open,
+  .sidebar.mobile-panel-drawer.mobile-open {
+    transform: translateX(0) !important;
   }
 
-  /* Make the titlebar compact. */
-  .app-titlebar {
-    height: 44px !important;
-    min-height: 44px !important;
-  }
-  .app-titlebar-title {
-    font-size: 15px !important;
-  }
+  /* Hide the resize handle on overlay sidebar */
+  .sidebar .resize-handle { display: none !important; }
 
-  /* Composer sticks to bottom, full width. */
-  .composer-wrap {
-    padding: 6px 8px !important;
+  /* Show the hamburger button so users can toggle the sidebar */
+  .app-titlebar-hamburger { display: flex !important; }
+  .app-titlebar-spacer { display: flex !important; }
+
+  /* Backdrop overlay when sidebar is open */
+  .mobile-overlay {
+    display: none !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0,0,0,0.5) !important;
+    z-index: 199 !important;
   }
-  #msg {
-    font-size: 14px !important;
+  body:has(.sidebar.mobile-open) .mobile-overlay { display: block !important; }
+
+  /* Messages can use full width since sidebar is overlay */
+  .messages-inner { max-width: 100% !important; padding: 16px !important; }
+
+  /* Composer gets full width */
+  .composer-wrap { padding: 8px 12px 12px !important; }
+
+  /* Right panel: also slide-over on portrait */
+  .rightpanel {
+    position: fixed !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 80vw !important;
+    z-index: 200 !important;
+    transform: translateX(100%) !important;
+    transition: transform 0.25s ease !important;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.4) !important;
   }
+  .rightpanel.mobile-open { transform: translateX(0) !important; }
 }
 
-/* ── Tall window optimization (height > 1400px — typical 1920 vertical) ─────── */
+/* ── Narrow landscape (half-height vertical, 1080×960 etc.) ── */
+@media (orientation: landscape) and (max-width: 1100px) {
+
+  /* Narrow the sidebar from 300px to 220px to give more room to content */
+  .sidebar { width: 220px !important; }
+  .sidebar .resize-handle { display: none !important; }
+
+  /* Tighten the composer padding */
+  .composer-wrap { padding: 8px 12px 12px !important; }
+
+  /* Messages get more of the width */
+  .messages-inner { max-width: 100% !important; }
+}
+
+/* ── Very tall windows (full vertical 1080×1920) ── */
 @media (min-height: 1400px) {
-  /* Use the extra vertical space — larger message area, comfortable spacing. */
-  .messages {
-    max-width: 900px !important;
-  }
-  .messages-inner {
-    padding: 16px 24px !important;
-  }
-
-  /* Empty state gets more breathing room. */
-  .empty-state {
-    padding: 40px 24px !important;
-  }
-  .empty-state h2 {
-    font-size: 24px !important;
-  }
+  .messages-inner { max-width: 900px !important; }
+  .messages { padding-bottom: 32px !important; }
+  .composer-wrap { padding: 12px 20px 20px !important; }
 }
 
-/* ── Hyprland-specific: remove gaps and borders for tiled windows ──────────── */
-/* When tiled by Hyprland, the window has no decorations. Ensure no wasted
-   space around the WebView. */
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+/* ── Ultra-narrow (< 700px wide, landscape) ── */
+@media (max-width: 700px) {
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 280px !important;
+    max-width: 80vw !important;
+    z-index: 200 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s ease !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
+  }
+  .sidebar.mobile-open { transform: translateX(0) !important; }
+  .sidebar .resize-handle { display: none !important; }
+  .app-titlebar-hamburger { display: flex !important; }
 }

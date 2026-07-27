@@ -49,15 +49,13 @@ ssh -N -L 8787:127.0.0.1:8787 user@remote-host &
 ./run.sh https://hermes.example.com
 ```
 
-### Command-line options
+### Keyboard Shortcuts
 
-```
-./run.sh [URL] [--fullscreen] [--no-theme]
-
-  URL                  WebUI server URL (default: http://localhost:8787)
-  --fullscreen         Start in fullscreen mode
-  --no-theme           Skip injecting the LunkserverManager theme
-```
+| Shortcut | Action |
+|---|---|
+| `Ctrl+L` | Switch server (back to setup screen) |
+| `Ctrl+R` | Reload current page |
+| `Ctrl+Q` | Quit |
 
 ## Hyprland Configuration
 
@@ -89,10 +87,11 @@ No configuration needed — the CSS adapts to whatever window size Hyprland give
 ## Architecture
 
 ```
-lunkagent.py              — GTK3 + WebKit2 client: creates window, injects theme, connects to URL
+lunkagent.py              — GTK3 + WebKit2 client: window, theme/JS injection, server config
 theme/lunkserver-dark.css — LunkserverManager design language via CSS variable overrides
 theme/vertical.css        — Portrait/half-height/tall monitor media queries
-run.sh                    — Dependency check + launcher
+theme/inject.js           — Force dark mode + portrait sidebar hamburger toggle
+run.sh                    — Launcher
 ```
 
 **Design decision:** We wrap the real Hermes WebUI rather than reimplementing its frontend. The WebUI is ~27,000 lines of vanilla HTML/CSS/JS with a mature SSE streaming layer, session management, and dozens of API endpoints. Rebuilding it would be months of work for zero gain. Instead, we embed it in a WebView and inject our theme via `WebKit.UserStyleSheet` — the same mechanism the WebUI uses for its built-in skins.
