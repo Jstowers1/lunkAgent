@@ -38,8 +38,9 @@ html.lunk-vertical .app-titlebar-spacer { display: flex !important; }
    overlay sidebar. */
 html.lunk-vertical .sidebar > .sidebar-nav { display: flex !important; }
 
-/* Nav tab tooltips: the WebUI positions them ABOVE the button, which gets
-   clipped at the top of the sidebar. Flip them below in vertical mode. */
+/* Nav tab tooltips: .nav-tab has overflow:hidden which clips ::after.
+   Override overflow and position tooltip below in vertical mode. */
+html.lunk-vertical .sidebar-nav .nav-tab { overflow: visible !important; }
 html.lunk-vertical .sidebar-nav .nav-tab:hover::after {
   bottom: auto !important;
   top: calc(100% + 8px) !important;
