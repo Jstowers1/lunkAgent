@@ -36,7 +36,7 @@ html.lunk-vertical .app-titlebar-spacer { display: flex !important; }
 /* The WebUI hides .sidebar-nav at min-width:641px (rail has duplicate buttons).
    Since we hide the rail, force sidebar-nav visible so nav tabs appear in the
    overlay sidebar. */
-html.lunk-vertical .sidebar > .sidebar-nav { display: flex !important; }
+html.lunk-vertical .sidebar > .sidebar-nav { display: flex !important; flex-wrap: wrap !important; }
 
 /* Nav tab tooltips: .nav-tab has overflow:hidden which clips ::after.
    Override overflow and position tooltip below in vertical mode. */
