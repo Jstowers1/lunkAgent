@@ -43,7 +43,7 @@ INJECT_JS = REPO_DIR / "theme" / "inject.js"
 SOUND_COMPLETE = REPO_DIR / "sounds" / "complete.wav"
 SOUND_ATTENTION = REPO_DIR / "sounds" / "attention.wav"
 
-GTK_CSS = b"""
+GTK_CSS = """
 window { background: #111827; }
 label { color: #e5e7eb; }
 label.title { font-size: 28px; font-weight: 700; color: #fff; }
@@ -69,23 +69,18 @@ button.menu-item {
   padding: 8px 16px; font-size: 13px;
 }
 button.menu-item:hover { background: #374151; }
-label.update-banner {
-  background: #1f2937; color: #fbbf24; border: 1px solid #374151;
-  border-radius: 6px; padding: 6px 12px; font-size: 12px;
+/* ── Inline update banner ── */
+box.update-bar {
+  background: #1a1a2e; border-bottom: 1px solid #374151;
+  padding: 8px 16px;
 }
-dialog, dialog decoration { background: #111827; }
-dialog .dialog-vbox, dialog .dialog-action-area { background: #111827; }
-dialog label { color: #e5e7eb; }
-dialog button {
-  background: #374151; color: #e5e7eb; border: 1px solid #4b5563;
-  border-radius: 8px; padding: 8px 24px; font-size: 14px; font-weight: 600;
-  min-height: 36px;
-}
-dialog button:hover { background: #4b5563; }
-dialog button.suggested-action {
+box.update-bar label { color: #e5e7eb; font-size: 13px; }
+box.update-bar button {
   background: #3b82f6; border: none; color: #fff;
+  border-radius: 6px; padding: 4px 16px; font-size: 13px; font-weight: 600;
+  min-height: 30px;
 }
-dialog button.suggested-action:hover { background: #60a5fa; }
+box.update-bar button:hover { background: #60a5fa; }
 """
 
 
@@ -193,6 +188,12 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self.set_default_size(1280, 800)
         self.connect("key-press-event", self._on_keypress)
 
+        # root vbox: [optional update bar] + [content area]
+        self._root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.add(self._root)
+        self._content_area = None  # holds setup screen or webview
+        self._update_bar = None
+
         cfg = load_config()
         last = cfg.get("last")
         if last:
@@ -269,8 +270,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                 srv_btn.connect("clicked", lambda w, u=srv: self.show_webview(u))
                 outer.pack_start(srv_btn, False, False, 0)
 
-        self.add(outer)
-        self.show_all()
+        self._set_content(outer)
         if not servers:
             entry.grab_focus()
 
@@ -333,8 +333,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._webview.connect("notify::title", self._on_title_notify)
         self._webview.load_uri(url)
 
-        self.add(self._webview)
-        self.show_all()
+        self._set_content(self._webview)
 
     def _on_script_message(self, ucom, js_result):
         """Called when injected JS posts to the lunkNotify handler — play sound."""
@@ -381,9 +380,83 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         return False
 
     def _clear_child(self):
-        for child in self.get_children():
-            self.remove(child)
-            child.destroy()
+        """Remove the content area (setup screen or webview), keep update bar."""
+        if self._content_area:
+            self._root.remove(self._content_area)
+            self._content_area.destroy()
+            self._content_area = None
+
+    def _set_content(self, widget):
+        """Swap the content area, preserving the update bar if present."""
+        self._clear_child()
+        self._content_area = widget
+        self._root.pack_end(self._content_area, True, True, 0)
+        self._content_area.show_all()
+
+    def show_update_bar(self):
+        """Show an inline update banner at the top of the window."""
+        if self._update_bar:
+            return  # already shown
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        bar.get_style_context().add_class("update-bar")
+        bar.set_halign(Gtk.Align.FILL)
+
+        label = Gtk.Label(label="Update available - pull latest from GitHub?")
+        label.set_halign(Gtk.Align.START)
+        bar.pack_start(label, True, True, 0)
+
+        update_btn = Gtk.Button(label="Update")
+        update_btn.connect("clicked", lambda w: self._do_update())
+        bar.pack_start(update_btn, False, False, 0)
+
+        dismiss_btn = Gtk.Button(label="x")
+        dismiss_btn.get_style_context().add_class("switch")
+        dismiss_btn.connect("clicked", lambda w: self._hide_update_bar())
+        bar.pack_start(dismiss_btn, False, False, 0)
+
+        self._update_bar = bar
+        self._root.pack_start(bar, False, False, 0)
+        self._root.reorder_child(bar, 0)
+        bar.show_all()
+
+    def _hide_update_bar(self):
+        if self._update_bar:
+            self._root.remove(self._update_bar)
+            self._update_bar.destroy()
+            self._update_bar = None
+
+    def _do_update(self):
+        """Pull update and restart the app."""
+        # Show "updating..." state
+        for child in self._update_bar.get_children():
+            if isinstance(child, Gtk.Button) and child.get_label() == "Update":
+                child.set_label("Updating...")
+                child.set_sensitive(False)
+
+        def _pull_and_restart():
+            ok = do_git_update()
+            GLib.idle_add(lambda: self._on_update_done(ok))
+
+        import threading
+        t = threading.Thread(target=_pull_and_restart, daemon=True)
+        t.start()
+
+    def _on_update_done(self, ok: bool):
+        if ok:
+            self._hide_update_bar()
+            # Restart cleanly: re-exec the process
+            GLib.timeout_add(100, lambda: self._restart())
+        else:
+            # Show error in the bar
+            for child in self._update_bar.get_children():
+                if isinstance(child, Gtk.Label):
+                    child.set_text("Update failed - check your connection")
+                    break
+
+    def _restart(self):
+        self.get_application().quit()
+        os.execv(sys.executable,
+                 [sys.executable, str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
 
 
 # ── App ──
@@ -399,7 +472,7 @@ class LunkAgentApp(Gtk.Application):
 
     def do_activate(self):
         provider = Gtk.CssProvider()
-        provider.load_from_data(GTK_CSS)
+        provider.load_from_data(GTK_CSS.encode('utf-8'))
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(), provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -420,64 +493,11 @@ class LunkAgentApp(Gtk.Application):
     def _check_updates_async(self):
         def _check():
             if check_git_update() is not None:
-                GLib.idle_add(self._show_update_dialog)
+                GLib.idle_add(lambda: self._window.show_update_bar() if self._window else None)
             return False
         import threading
         t = threading.Thread(target=_check, daemon=True)
         t.start()
-
-    def _show_update_dialog(self):
-        """Prompt the user to pull the update, then offer restart."""
-        win = self._window
-        if not win:
-            return
-        dialog = Gtk.Dialog(
-            title="Update Available", transient_for=win, modal=True,
-            add_buttons=(
-                "Skip", Gtk.ResponseType.REJECT,
-                "Update Now", Gtk.ResponseType.ACCEPT,
-            ))
-        dialog.set_default_size(380, -1)
-        content = dialog.get_content_area()
-        content.set_spacing(0)
-
-        # Header
-        header = Gtk.Label(label="⟳ Update Available")
-        header.get_style_context().add_class("title")
-        header.set_halign(Gtk.Align.START)
-        header.set_margin_top(28)
-        header.set_margin_start(28)
-        header.set_margin_bottom(4)
-        content.pack_start(header, False, False, 0)
-
-        # Body
-        body = Gtk.Label(label="A new version of LunkAgent is on GitHub.\nUpdate now? The app will restart automatically.")
-        body.set_halign(Gtk.Align.START)
-        body.set_margin_top(8)
-        body.set_margin_start(28)
-        body.set_margin_end(28)
-        body.set_margin_bottom(24)
-        body.set_line_wrap(True)
-        content.pack_start(body, False, False, 0)
-
-        # Style the Update button as primary action (blue)
-        for btn in dialog.get_action_area().get_children():
-            if btn.get_label() == "Update Now":
-                btn.get_style_context().add_class("suggested-action")
-            else:
-                btn.get_style_context().add_class("text-button")
-
-        dialog.show_all()
-
-        def _on_response(_dlg, response):
-            dialog.destroy()
-            if response == Gtk.ResponseType.ACCEPT:
-                if do_git_update():
-                    self.quit()
-                    os.execv(sys.executable,
-                             [sys.executable, str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
-
-        dialog.connect("response", _on_response)
 
 
 def main():
