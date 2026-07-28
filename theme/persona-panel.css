@@ -1,0 +1,231 @@
+/* LunkAgent — Persona DB panel styling.
+   Uses CSS variables from lunkserver-dark.css. */
+
+#persona-trigger {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: background 0.15s, transform 0.15s;
+}
+#persona-trigger:hover {
+  background: var(--accent-hover);
+  transform: scale(1.08);
+}
+html.lunk-vertical #persona-trigger {
+  right: auto;
+  left: 20px;
+}
+
+#persona-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-height: 80vh;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+#persona-panel .pp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+#persona-panel .pp-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+#persona-panel .pp-search {
+  flex: 1;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+#persona-panel .pp-search::placeholder { color: var(--muted); }
+#persona-panel .pp-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+#persona-panel .pp-close:hover { color: var(--text); }
+
+#persona-panel .pp-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+}
+
+#persona-panel .pp-category {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--accent);
+  padding: 10px 16px 4px;
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.5px;
+}
+#persona-panel .pp-category:hover { color: var(--accent-hover); }
+#persona-panel .pp-category.collapsed + .pp-facts { display: none; }
+
+#persona-panel .pp-facts { padding: 0 8px; }
+
+#persona-panel .pp-fact {
+  padding: 8px 8px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#persona-panel .pp-fact:hover { background: var(--hover-bg); }
+
+#persona-panel .pp-fact-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+#persona-panel .pp-fact-key {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+#persona-panel .pp-fact-value {
+  font-size: 13px;
+  color: var(--muted);
+  word-break: break-word;
+  cursor: text;
+  flex: 1;
+}
+#persona-panel .pp-fact-value[contenteditable="true"] {
+  background: var(--input-bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 4px;
+  outline: none;
+}
+#persona-panel .pp-fact-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+#persona-panel .pp-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+#persona-panel .pp-badge.low { color: var(--warning); border-color: var(--warning); }
+#persona-panel .pp-badge.medium { color: var(--info); border-color: var(--info); }
+#persona-panel .pp-badge.aspirational { color: var(--accent-text); border-color: var(--accent); }
+#persona-panel .pp-act-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  font-family: inherit;
+}
+#persona-panel .pp-act-btn:hover { color: var(--text); border-color: var(--accent); }
+#persona-panel .pp-act-btn.del:hover { color: var(--error); border-color: var(--error); }
+
+#persona-panel .pp-add-btn {
+  margin: 4px 16px 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+#persona-panel .pp-add-btn:hover { background: var(--accent-hover); }
+
+#persona-panel .pp-add-form {
+  margin: 4px 16px 10px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+}
+#persona-panel .pp-add-form.open { display: flex; }
+#persona-panel .pp-add-form input,
+#persona-panel .pp-add-form select {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+#persona-panel .pp-add-form textarea {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  min-height: 50px;
+  resize: vertical;
+}
+#persona-panel .pp-add-actions { display: flex; gap: 8px; }
+#persona-panel .pp-add-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+#persona-panel .pp-add-submit { background: var(--accent); color: #fff; }
+#persona-panel .pp-add-submit:hover { background: var(--accent-hover); }
+#persona-panel .pp-add-cancel { background: var(--hover-bg); color: var(--text); }
+
+#persona-panel .pp-status {
+  padding: 4px 16px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 18px;
+}
+#persona-panel .pp-status.error { color: var(--error); }
+#persona-panel .pp-status.ok { color: var(--success); }
