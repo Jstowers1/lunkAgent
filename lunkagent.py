@@ -73,6 +73,19 @@ label.update-banner {
   background: #1f2937; color: #fbbf24; border: 1px solid #374151;
   border-radius: 6px; padding: 6px 12px; font-size: 12px;
 }
+dialog, dialog decoration { background: #111827; }
+dialog .dialog-vbox, dialog .dialog-action-area { background: #111827; }
+dialog label { color: #e5e7eb; }
+dialog button {
+  background: #374151; color: #e5e7eb; border: 1px solid #4b5563;
+  border-radius: 8px; padding: 8px 24px; font-size: 14px; font-weight: 600;
+  min-height: 36px;
+}
+dialog button:hover { background: #4b5563; }
+dialog button.suggested-action {
+  background: #3b82f6; border: none; color: #fff;
+}
+dialog button.suggested-action:hover { background: #60a5fa; }
 """
 
 
@@ -424,14 +437,36 @@ class LunkAgentApp(Gtk.Application):
                 "Skip", Gtk.ResponseType.REJECT,
                 "Update Now", Gtk.ResponseType.ACCEPT,
             ))
-        dialog.set_default_size(360, -1)
-        label = Gtk.Label(label="A new version of LunkAgent is available.\n\nUpdate now? The app will restart.")
-        label.set_margin_top(20)
-        label.set_margin_bottom(20)
-        label.set_margin_start(24)
-        label.set_margin_end(24)
-        label.set_line_wrap(True)
-        dialog.get_content_area().pack_start(label, True, True, 0)
+        dialog.set_default_size(380, -1)
+        content = dialog.get_content_area()
+        content.set_spacing(0)
+
+        # Header
+        header = Gtk.Label(label="⟳ Update Available")
+        header.get_style_context().add_class("title")
+        header.set_halign(Gtk.Align.START)
+        header.set_margin_top(28)
+        header.set_margin_start(28)
+        header.set_margin_bottom(4)
+        content.pack_start(header, False, False, 0)
+
+        # Body
+        body = Gtk.Label(label="A new version of LunkAgent is on GitHub.\nUpdate now? The app will restart automatically.")
+        body.set_halign(Gtk.Align.START)
+        body.set_margin_top(8)
+        body.set_margin_start(28)
+        body.set_margin_end(28)
+        body.set_margin_bottom(24)
+        body.set_line_wrap(True)
+        content.pack_start(body, False, False, 0)
+
+        # Style the Update button as primary action (blue)
+        for btn in dialog.get_action_area().get_children():
+            if btn.get_label() == "Update Now":
+                btn.get_style_context().add_class("suggested-action")
+            else:
+                btn.get_style_context().add_class("text-button")
+
         dialog.show_all()
 
         def _on_response(_dlg, response):
@@ -439,8 +474,8 @@ class LunkAgentApp(Gtk.Application):
             if response == Gtk.ResponseType.ACCEPT:
                 if do_git_update():
                     self.quit()
-                    import os
-                    os.execv(sys.executable, [sys.executable] + [str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
+                    os.execv(sys.executable,
+                             [sys.executable, str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
 
         dialog.connect("response", _on_response)
 
