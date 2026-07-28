@@ -146,9 +146,12 @@ def normalize_url(url: str) -> str:
 
 # ── Sound ──
 
+_NO_SOUND = False
+
+
 def play_sound(path: Path) -> None:
     """Play a WAV file. Tries pw-cat (PipeWire), falls back to aplay."""
-    if not path.exists():
+    if _NO_SOUND or not path.exists():
         return
     for cmd in (
         ["pw-cat", "--playback", str(path)],
@@ -177,9 +180,8 @@ def check_git_update() -> str | None:
         local_sha = result.stdout.strip()
         if not local_sha:
             return None
-        import urllib.request
-        req = urllib.request.Request(GITHUB_API, headers={"Accept": "application/vnd.github.v3.sha"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        req = Request(GITHUB_API, headers={"Accept": "application/vnd.github.v3.sha"})
+        with urlopen(req, timeout=10) as resp:
             remote_sha = resp.read().decode().strip()
         return remote_sha if remote_sha != local_sha else None
     except Exception:
@@ -483,7 +485,6 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
             ok = do_git_update()
             GLib.idle_add(lambda: self._on_update_done(ok))
 
-        import threading
         t = threading.Thread(target=_pull_and_restart, daemon=True)
         t.start()
 
@@ -508,12 +509,11 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
 # ── App ──
 
 class LunkAgentApp(Gtk.Application):
-    def __init__(self, theme_css, vertical_css, fullscreen, no_sound):
+    def __init__(self, theme_css, vertical_css, fullscreen):
         super().__init__(application_id=APP_ID, register_session=True)
         self._theme_css = theme_css
         self._vertical_css = vertical_css
         self._fullscreen = fullscreen
-        self._no_sound = no_sound
         self._window = None
 
     def do_activate(self):
@@ -561,8 +561,6 @@ class LunkAgentApp(Gtk.Application):
         def _check():
             if check_git_update() is not None:
                 GLib.idle_add(lambda: self._window.show_update_bar() if self._window else None)
-            return False
-        import threading
         t = threading.Thread(target=_check, daemon=True)
         t.start()
 
@@ -570,7 +568,8 @@ class LunkAgentApp(Gtk.Application):
 def main():
     no_theme = "--no-theme" in sys.argv
     fullscreen = "--fullscreen" in sys.argv
-    no_sound = "--no-sound" in sys.argv
+    global _NO_SOUND
+    _NO_SOUND = "--no-sound" in sys.argv
 
     theme_css = "" if no_theme else read_text(THEME_CSS)
     vertical_css = read_text(VERTICAL_CSS)
@@ -578,7 +577,7 @@ def main():
     sys.argv = [sys.argv[0]]
 
     app = LunkAgentApp(theme_css=theme_css, vertical_css=vertical_css,
-                       fullscreen=fullscreen, no_sound=no_sound)
+                       fullscreen=fullscreen)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.run(sys.argv)
 

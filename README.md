@@ -24,15 +24,18 @@ cd lunkAgent
 
 ## Updates
 
-**Automatic.** On every startup, LunkAgent checks GitHub for new commits. If an update is available, you get a dialog prompt:
+**Automatic.** On startup, LunkAgent checks GitHub for new commits. If an update is available, you get an inline banner at the top of the window:
 
 ```
-A new version of LunkAgent is available.
-
-Update now?  [Skip]  [Update Now]
+┌─────────────────────────────────────────────────────┐
+│  ◆  Update available           [ Update ]    [×]   │
+│     A new version is ready to install               │
+└─────────────────────────────────────────────────────┘
 ```
 
-Click **Update Now** — it pulls over HTTPS (no SSH key needed) and restarts. That's it. No `git pull`, no terminal.
+Click **Update** — it pulls over HTTPS (no SSH key needed) and restarts. That's it. No `git pull`, no terminal.
+
+For **instant** notifications (not just on startup), LunkAgent maintains a persistent SSE connection to an ntfy.sh topic that receives a push on every commit to `main`. When a push arrives, it immediately verifies against the GitHub API and shows the banner if there's a real update.
 
 ## Requirements
 
@@ -59,6 +62,14 @@ The app remembers your last server. First launch (or `Ctrl+L`) shows the server 
 | `Ctrl+L` | Switch server |
 | `Ctrl+R` | Reload |
 
+### CLI Flags
+
+| Flag | Effect |
+|---|---|
+| `--fullscreen` | Open in fullscreen |
+| `--no-theme` | Disable the LunkserverManager dark theme (use WebUI defaults) |
+| `--no-sound` | Disable notification sounds |
+
 ### Notification Sounds
 
 LunkAgent plays a sound when an agent finishes a task or needs your input (approval/clarification). Disable with `--no-sound`.
@@ -79,27 +90,28 @@ See [`hyprland.conf.example`](hyprland.conf.example) for more options.
 
 ## Vertical Monitor Support
 
-LunkAgent ships with CSS overrides (`theme/vertical.css`) that detect vertical/portrait orientation via CSS media queries and automatically restructure the WebUI layout:
+LunkAgent detects vertical/portrait orientation via **JavaScript** (not CSS media queries — Wayland doesn't report rotated displays as portrait). When `window.innerHeight > window.innerWidth` or the width drops below 700px, a `.lunk-vertical` class is added to `<html>`.
 
-| Window Shape | What Changes |
+| Condition | What Changes |
 |---|---|
-| **Portrait** (aspect-ratio < 1.0) | Hides icon rail, narrows sidebar to 240px, stacks suggestion cards vertically, full-width composer |
-| **Half-height portrait** (1080×960) | Narrows sidebar to 260px, compacts rail icons |
-| **Very tall** (height ≥ 1400px) | Widens message area, adds breathing room |
-| **Narrow** (< 720px) | Mobile-style layout, compact titlebar/composer |
+| **Portrait** (height > width, or width < 700px) | Hides icon rail, sidebar becomes off-canvas slide-in (280px, max 80vw) with hamburger toggle + dark backdrop overlay, full-width message area and composer |
 
-No configuration needed — the CSS adapts to whatever window size Hyprland gives it.
+No configuration needed — the layout adapts to whatever window size Hyprland gives it.
 
 ## Architecture
 
 ```
-lunkagent.py              — GTK3 + WebKit2 client: window, theme/JS injection, sound, git update check
-theme/lunkserver-dark.css — LunkserverManager design language via CSS variable overrides
-theme/vertical.css        — Portrait/half-height/tall monitor media queries
-theme/inject.js           — Force dark mode + notification bridge to native
-sounds/complete.wav       — Chime played on task completion
-sounds/attention.wav      — Tone played when attention needed
-run.sh                    — Launcher
+lunkagent.py                        — GTK3 + WebKit2 client: window, theme/JS injection, sound, git update check + ntfy.sh SSE listener
+theme/lunkserver-dark.css           — LunkserverManager design language via CSS variable overrides
+theme/vertical.css                  — Portrait/narrow layout (triggered by JS class, not media queries)
+theme/inject.js                     — Force dark mode, scroll-pinning fix, notification bridge to native
+sounds/complete.wav                 — Chime played on task completion
+sounds/attention.wav                — Tone played when attention needed
+install.sh                          — One-liner curl|bash installer
+run.sh                              — Manual launch wrapper
+dev.lunkman.LunkAgent.desktop       — Freedesktop.org app menu entry
+hyprland.conf.example               — Hyprland window rule examples
+.github/workflows/notify.yml        — Pushes commit notifications to ntfy.sh
 ```
 
 **Design decision:** We wrap the real Hermes WebUI rather than reimplementing its frontend. The WebUI is ~27,000 lines of vanilla HTML/CSS/JS with a mature SSE streaming layer, session management, and dozens of API endpoints. Rebuilding it would be months of work for zero gain. Instead, we embed it in a WebView and inject our theme via `WebKit.UserStyleSheet` — the same mechanism the WebUI uses for its built-in skins.

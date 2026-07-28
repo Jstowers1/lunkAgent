@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # LunkAgent launcher — native Hermes WebUI client.
-# Usage: ./run.sh [URL] [--fullscreen] [--no-theme]
+# Usage: ./run.sh [--fullscreen] [--no-theme] [--no-sound]
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
