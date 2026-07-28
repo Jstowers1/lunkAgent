@@ -88,16 +88,28 @@ separator { background: #374151; min-height: 1px; }
 /* ── Inline update banner ── */
 box.update-bar {
   background: #1f2937; border-bottom: 1px solid #374151;
+  padding: 0;
+}
+box.update-bar box.bar-inner {
   padding: 10px 16px;
+  border-left: 3px solid #3b82f6;
 }
-box.update-bar label { color: #e5e7eb; font-size: 14px; }
-box.update-bar button {
+box.update-bar label { color: #e5e7eb; font-size: 13px; }
+box.update-bar label.title { color: #fff; font-weight: 700; font-size: 13px; }
+box.update-bar label.detail { color: #9ca3af; font-size: 12px; }
+box.update-bar button.update-btn {
   background: #3b82f6; border: none; color: #fff;
-  border-radius: 8px; padding: 8px 20px; font-size: 14px; font-weight: 600;
-  min-height: 36px;
+  border-radius: 6px; padding: 6px 18px; font-size: 13px; font-weight: 600;
+  min-height: 30px;
 }
-box.update-bar button:hover { background: #60a5fa; }
-box.update-bar button.switch { background: transparent; color: #9ca3af; border: 1px solid #374151; }
+box.update-bar button.update-btn:hover { background: #60a5fa; }
+box.update-bar button.dismiss {
+  background: transparent; color: #6b7280; border: none;
+  border-radius: 6px; padding: 4px 8px; font-size: 16px;
+  min-width: 28px; min-height: 28px;
+}
+box.update-bar button.dismiss:hover { background: rgba(255,255,255,0.08); color: #e5e7eb; }
+box.update-bar image { color: #3b82f6; }
 """
 
 
@@ -413,24 +425,41 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
     def show_update_bar(self):
         """Show an inline update banner at the top of the window."""
         if self._update_bar:
-            return  # already shown
-        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            return
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         bar.get_style_context().add_class("update-bar")
-        bar.set_halign(Gtk.Align.FILL)
 
-        label = Gtk.Label(label="Update available - pull latest from GitHub?")
-        label.set_halign(Gtk.Align.START)
-        bar.pack_start(label, True, True, 0)
+        inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        inner.get_style_context().add_class("bar-inner")
+        inner.set_halign(Gtk.Align.FILL)
+
+        # Download/update icon
+        icon = Gtk.Image.new_from_icon_name("software-update-available", Gtk.IconSize.MENU)
+        inner.pack_start(icon, False, False, 0)
+
+        # Text: bold title + muted detail
+        text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        title = Gtk.Label(label="Update available")
+        title.get_style_context().add_class("title")
+        title.set_halign(Gtk.Align.START)
+        detail = Gtk.Label(label="A new version is ready to install")
+        detail.get_style_context().add_class("detail")
+        detail.set_halign(Gtk.Align.START)
+        text.pack_start(title, False, False, 0)
+        text.pack_start(detail, False, False, 0)
+        inner.pack_start(text, True, True, 0)
 
         update_btn = Gtk.Button(label="Update")
+        update_btn.get_style_context().add_class("update-btn")
         update_btn.connect("clicked", lambda w: self._do_update())
-        bar.pack_start(update_btn, False, False, 0)
+        inner.pack_start(update_btn, False, False, 0)
 
-        dismiss_btn = Gtk.Button(label="x")
-        dismiss_btn.get_style_context().add_class("switch")
+        dismiss_btn = Gtk.Button(label="\u00d7")  # ×
+        dismiss_btn.get_style_context().add_class("dismiss")
         dismiss_btn.connect("clicked", lambda w: self._hide_update_bar())
-        bar.pack_start(dismiss_btn, False, False, 0)
+        inner.pack_start(dismiss_btn, False, False, 0)
 
+        bar.pack_start(inner, True, True, 0)
         self._update_bar = bar
         self._root.pack_start(bar, False, False, 0)
         self._root.reorder_child(bar, 0)
