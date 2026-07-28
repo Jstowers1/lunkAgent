@@ -71,16 +71,17 @@ button.menu-item {
 button.menu-item:hover { background: #374151; }
 /* ── Inline update banner ── */
 box.update-bar {
-  background: #1a1a2e; border-bottom: 1px solid #374151;
-  padding: 8px 16px;
+  background: #1f2937; border-bottom: 1px solid #374151;
+  padding: 10px 16px;
 }
-box.update-bar label { color: #e5e7eb; font-size: 13px; }
+box.update-bar label { color: #e5e7eb; font-size: 14px; }
 box.update-bar button {
   background: #3b82f6; border: none; color: #fff;
-  border-radius: 6px; padding: 4px 16px; font-size: 13px; font-weight: 600;
-  min-height: 30px;
+  border-radius: 8px; padding: 8px 20px; font-size: 14px; font-weight: 600;
+  min-height: 36px;
 }
 box.update-bar button:hover { background: #60a5fa; }
+box.update-bar button.switch { background: transparent; color: #9ca3af; border: 1px solid #374151; }
 """
 
 
