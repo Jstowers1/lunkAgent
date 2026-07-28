@@ -50,13 +50,7 @@ sudo apt install gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
 
 ## Connecting to a Server
 
-The app remembers your last server. First launch (or `Ctrl+L`) shows the server picker:
-
-```
-http://hostname:8787
-```
-
-Default is the Hermes WebUI at `http://100.116.126.23:8787` (Tailscale). Make sure the WebUI server is already running.
+The app remembers your last server. First launch (or `Ctrl+L`) shows the server picker — enter your Hermes WebUI address (e.g. `http://hostname:8787` or a Tailscale IP).
 
 ### Keyboard Shortcuts
 
