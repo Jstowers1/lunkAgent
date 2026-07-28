@@ -486,6 +486,8 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
             # Restart cleanly: re-exec the process
             GLib.timeout_add(100, lambda: self._restart())
         else:
+            if not self._update_bar:
+                return
             # Show error in the bar
             for child in self._update_bar.get_children():
                 if isinstance(child, Gtk.Label):

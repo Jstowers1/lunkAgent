@@ -37,7 +37,13 @@ exec python3 lunkagent.py "\$@"
 EOF
 chmod +x "$BIN_DIR/lunkagent"
 
-# 4. .desktop entry
+# 4. App icon
+ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
+mkdir -p "$ICON_DIR"
+cp "$INSTALL_DIR/icons/lunkagent.svg" "$ICON_DIR/lunkagent.svg"
+gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+
+# 5. .desktop entry
 APP_DIR="$HOME/.local/share/applications"
 mkdir -p "$APP_DIR"
 cp "$INSTALL_DIR/dev.lunkman.LunkAgent.desktop" "$APP_DIR/dev.lunkman.LunkAgent.desktop"
