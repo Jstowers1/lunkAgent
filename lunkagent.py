@@ -407,29 +407,42 @@ class LunkAgentApp(Gtk.Application):
     def _check_updates_async(self):
         def _check():
             if check_git_update() is not None:
-                # Auto-pull over HTTPS, then prompt restart
-                if do_git_update():
-                    GLib.idle_add(self._show_update_banner)
+                GLib.idle_add(self._show_update_dialog)
             return False
         import threading
         t = threading.Thread(target=_check, daemon=True)
         t.start()
 
-    def _show_update_banner(self):
-        # ponytail: simple label at top of setup screen, not a modal dialog
+    def _show_update_dialog(self):
+        """Prompt the user to pull the update, then offer restart."""
         win = self._window
         if not win:
             return
-        for child in win.get_children():
-            if isinstance(child, Gtk.Box):
-                banner = Gtk.Label(label="⟳ Updated — restart to apply")
-                banner.get_style_context().add_class("update-banner")
-                banner.set_halign(Gtk.Align.CENTER)
-                banner.set_margin_bottom(12)
-                child.pack_start(banner, False, False, 0)
-                child.reorder_child(banner, 0)
-                win.show_all()
-                break
+        dialog = Gtk.Dialog(
+            title="Update Available", transient_for=win, modal=True,
+            add_buttons=(
+                "Skip", Gtk.ResponseType.REJECT,
+                "Update Now", Gtk.ResponseType.ACCEPT,
+            ))
+        dialog.set_default_size(360, -1)
+        label = Gtk.Label(label="A new version of LunkAgent is available.\n\nUpdate now? The app will restart.")
+        label.set_margin_top(20)
+        label.set_margin_bottom(20)
+        label.set_margin_start(24)
+        label.set_margin_end(24)
+        label.set_line_wrap(True)
+        dialog.get_content_area().pack_start(label, True, True, 0)
+        dialog.show_all()
+
+        def _on_response(_dlg, response):
+            dialog.destroy()
+            if response == Gtk.ResponseType.ACCEPT:
+                if do_git_update():
+                    self.quit()
+                    import os
+                    os.execv(sys.executable, [sys.executable] + [str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
+
+        dialog.connect("response", _on_response)
 
 
 def main():

@@ -1,15 +1,38 @@
 # LunkAgent
 
-Native Hermes WebUI client for **CachyOS / Hyprland (Wayland)**. A GTK4 + WebKit6 wrapper that connects to any running Hermes WebUI server with a **LunkserverManager-inspired dark theme** and vertical monitor optimizations.
+Native Hermes WebUI client for **CachyOS / Hyprland (Wayland)**. A GTK3 + WebKit2 wrapper that connects to any running Hermes WebUI server with a **LunkserverManager-inspired dark theme** and vertical monitor optimizations.
 
-## Why?
+## Install
 
-The Hermes WebUI is a powerful web app (chat, tasks, kanban, skills, memory, sessions, settings). Running it in a native window gives you:
+One command:
 
-- **Native Wayland window** — no browser tab, no Electron bloat
-- **LunkserverManager design language** — dark gray-900 palette, JetBrainsMono, blue-400 accents, thin scrollbars
-- **Vertical monitor optimized** — full-height 1080×1920 portrait, half-height 1080×960, and standard landscape
-- **100% feature parity** — we embed the real WebUI, not a reimplementation
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jstowers1/lunkAgent/main/install.sh | bash
+```
+
+This installs dependencies (gtk3, python-gobject, webkit2gtk-4.1), clones the repo to `~/.local/share/lunkagent`, drops a `lunkagent` command in `~/.local/bin`, and registers the `.desktop` entry. Launch from your app menu or run `lunkagent`.
+
+### Manual install
+
+If you prefer:
+
+```bash
+git clone https://github.com/Jstowers1/lunkAgent.git
+cd lunkAgent
+./run.sh
+```
+
+## Updates
+
+**Automatic.** On every startup, LunkAgent checks GitHub for new commits. If an update is available, you get a dialog prompt:
+
+```
+A new version of LunkAgent is available.
+
+Update now?  [Skip]  [Update Now]
+```
+
+Click **Update Now** — it pulls over HTTPS (no SSH key needed) and restarts. That's it. No `git pull`, no terminal.
 
 ## Requirements
 
@@ -25,29 +48,15 @@ sudo pacman -S webkit2gtk-4.1 gtk3 python-gobject
 sudo apt install gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
 ```
 
-## Quick Start
+## Connecting to a Server
 
-```bash
-git clone https://github.com/lunkman/lunkagent.git
-cd lunkagent
-./run.sh
+The app remembers your last server. First launch (or `Ctrl+L`) shows the server picker:
+
+```
+http://hostname:8787
 ```
 
-This opens a native window and connects to `http://localhost:8787` (the default Hermes WebUI address). Make sure your Hermes WebUI server is already running on that address.
-
-### Connecting to a different server
-
-```bash
-# Positional URL argument
-./run.sh http://192.168.1.100:8787
-
-# Via SSH tunnel
-ssh -N -L 8787:127.0.0.1:8787 user@remote-host &
-./run.sh
-
-# Remote with TLS
-./run.sh https://hermes.example.com
-```
+Default is the Hermes WebUI at `http://100.116.126.23:8787` (Tailscale). Make sure the WebUI server is already running.
 
 ### Keyboard Shortcuts
 
@@ -58,11 +67,7 @@ ssh -N -L 8787:127.0.0.1:8787 user@remote-host &
 
 ### Notification Sounds
 
-LunkAgent plays a sound when an agent finishes a task or needs your input (approval/clarification). This works by bridging the WebUI's `sendBrowserNotification` calls to native audio. Disable with `--no-sound`.
-
-### Update Detection
-
-If the repo has a git remote configured, LunkAgent checks for new commits on startup and shows a banner on the setup screen. Pull with `git pull`.
+LunkAgent plays a sound when an agent finishes a task or needs your input (approval/clarification). Disable with `--no-sound`.
 
 ## Hyprland Configuration
 
