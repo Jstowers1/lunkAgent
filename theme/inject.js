@@ -31,6 +31,14 @@
   // pointing at an older row → user gets yanked upward.
   // Fix: wrap _captureMessageScrollSnapshot so it forces pinned:true while
   // a stream is active and the user hasn't genuinely scrolled away.
+  function _isStreaming() {
+    try { return (typeof S !== 'undefined' && S && (S.busy || S.activeStreamId)); }
+    catch(_) {}
+    try { return document.body.getAttribute('data-busy') === '1'; }
+    catch(_) {}
+    return false;
+  }
+
   function _patchScrollSnapshot() {
     if (window._lunkSnapPatched || typeof _captureMessageScrollSnapshot !== 'function') return;
     window._lunkSnapPatched = true;
@@ -39,14 +47,12 @@
       var snap = _origCapture.apply(this, arguments);
       // During active streaming, force pinned state so DOM re-renders
       // preserve the tail position instead of anchoring to stale rows.
-      if (snap && typeof _sendInProgress !== 'undefined' && _sendInProgress) {
+      if (snap && _isStreaming()) {
         snap.pinned = true;
         snap.userUnpinned = false;
       }
       return snap;
     };
-    // Also force scrollToBottom on send — send() resets pin flags but doesn't
-    // scroll, leaving the viewport at the prompt position.
     if (typeof send === 'function' && !window._lunkSendPatched) {
       window._lunkSendPatched = true;
       var _origSend = send;
