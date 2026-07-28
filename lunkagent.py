@@ -75,6 +75,8 @@ button.menu-item:hover { background: #374151; }
 menu {
   background: #1f2937; border: 1px solid #374151; border-radius: 8px;
   padding: 4px;
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
 }
 menuitem {
   color: #e5e7eb; padding: 6px 12px; border-radius: 4px;
