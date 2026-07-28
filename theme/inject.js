@@ -23,10 +23,28 @@
   _updatePortrait();
   window.addEventListener('resize', _updatePortrait);
 
-  // ── Auto-scroll: leave it entirely to the WebUI. It has its own
-  //    _scrollPinned / _autoScrollFollow system that respects user scroll
-  //    position. Touching it from here causes jitter and yanks users back
-  //    to bottom when they're trying to scroll up. Do nothing.
+  // ── Auto-scroll: the WebUI has a sophisticated scroll-pinning system, but
+  //    send() resets pin state WITHOUT calling scrollToBottom(). The first
+  //    scrollIfPinned() can bail (Enter keypress counts as scroll intent),
+  //    leaving the viewport at the prompt. The next renderMessages captures
+  //    a stale anchor at the prompt → restore yanks the user back up.
+  //    Fix: wrap send() to force scrollToBottom() after the message renders.
+  function _patchSendScroll() {
+    if (window._lunkSendPatched || typeof send !== 'function') return;
+    window._lunkSendPatched = true;
+    var _orig = send;
+    // ponytail: async wrapper — send() returns a promise; we don't need to
+    // await it, just nudge scroll after the DOM settles.
+    send = function() {
+      var ret = _orig.apply(this, arguments);
+      setTimeout(function() {
+        if (typeof scrollToBottom === 'function') scrollToBottom();
+      }, 300);
+      return ret;
+    };
+  }
+  _patchSendScroll();
+  setTimeout(_patchSendScroll, 2000);
 
   // ── Bridge sendBrowserNotification to native for sound ──
   function _wrapNotify() {
