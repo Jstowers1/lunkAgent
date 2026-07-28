@@ -391,7 +391,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._clear_child()
         self._content_area = widget
         self._root.pack_end(self._content_area, True, True, 0)
-        self._content_area.show_all()
+        self._root.show_all()
 
     def show_update_bar(self):
         """Show an inline update banner at the top of the window."""
