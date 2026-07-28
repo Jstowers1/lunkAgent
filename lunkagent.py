@@ -486,9 +486,10 @@ class LunkAgentApp(Gtk.Application):
         if self._fullscreen:
             self._window.fullscreen()
 
-        # Check for git updates in background
+        # Check for git updates in background, then every 10 min
         if (REPO_DIR / ".git").exists():
             self._check_updates_async()
+            GLib.timeout_add_seconds(600, self._check_updates_async)
 
     def _check_updates_async(self):
         def _check():

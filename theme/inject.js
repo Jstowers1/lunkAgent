@@ -23,28 +23,44 @@
   _updatePortrait();
   window.addEventListener('resize', _updatePortrait);
 
-  // ── Auto-scroll: the WebUI has a sophisticated scroll-pinning system, but
-  //    send() resets pin state WITHOUT calling scrollToBottom(). The first
-  //    scrollIfPinned() can bail (Enter keypress counts as scroll intent),
-  //    leaving the viewport at the prompt. The next renderMessages captures
-  //    a stale anchor at the prompt → restore yanks the user back up.
-  //    Fix: wrap send() to force scrollToBottom() after the message renders.
-  function _patchSendScroll() {
-    if (window._lunkSendPatched || typeof send !== 'function') return;
-    window._lunkSendPatched = true;
-    var _orig = send;
-    // ponytail: async wrapper — send() returns a promise; we don't need to
-    // await it, just nudge scroll after the DOM settles.
-    send = function() {
-      var ret = _orig.apply(this, arguments);
-      setTimeout(function() {
-        if (typeof scrollToBottom === 'function') scrollToBottom();
-      }, 300);
-      return ret;
+  // ── Auto-scroll fix ──
+  // The WebUI's scroll-pinning system can lose pin mid-stream during DOM
+  // re-renders: a programmatic scrollTop write gets misdetected as user
+  // scroll-up, setting _scrollPinned=false. The next renderMessages captures
+  // a snapshot with pinned:false, and the restore uses a semantic anchor
+  // pointing at an older row → user gets yanked upward.
+  // Fix: wrap _captureMessageScrollSnapshot so it forces pinned:true while
+  // a stream is active and the user hasn't genuinely scrolled away.
+  function _patchScrollSnapshot() {
+    if (window._lunkSnapPatched || typeof _captureMessageScrollSnapshot !== 'function') return;
+    window._lunkSnapPatched = true;
+    var _origCapture = _captureMessageScrollSnapshot;
+    _captureMessageScrollSnapshot = function() {
+      var snap = _origCapture.apply(this, arguments);
+      // During active streaming, force pinned state so DOM re-renders
+      // preserve the tail position instead of anchoring to stale rows.
+      if (snap && typeof _sendInProgress !== 'undefined' && _sendInProgress) {
+        snap.pinned = true;
+        snap.userUnpinned = false;
+      }
+      return snap;
     };
+    // Also force scrollToBottom on send — send() resets pin flags but doesn't
+    // scroll, leaving the viewport at the prompt position.
+    if (typeof send === 'function' && !window._lunkSendPatched) {
+      window._lunkSendPatched = true;
+      var _origSend = send;
+      send = function() {
+        var ret = _origSend.apply(this, arguments);
+        setTimeout(function() {
+          if (typeof scrollToBottom === 'function') scrollToBottom();
+        }, 300);
+        return ret;
+      };
+    }
   }
-  _patchSendScroll();
-  setTimeout(_patchSendScroll, 2000);
+  _patchScrollSnapshot();
+  setTimeout(_patchScrollSnapshot, 2000);
 
   // ── Bridge sendBrowserNotification to native for sound ──
   function _wrapNotify() {
