@@ -92,23 +92,22 @@ box.update-bar {
 }
 box.update-bar box.bar-inner {
   padding: 10px 16px;
-  border-left: 3px solid #3b82f6;
 }
 box.update-bar label { color: #e5e7eb; font-size: 13px; }
 box.update-bar label.title { color: #fff; font-weight: 700; font-size: 13px; }
 box.update-bar label.detail { color: #9ca3af; font-size: 12px; }
 box.update-bar button.update-btn {
   background: #3b82f6; border: none; color: #fff;
-  border-radius: 6px; padding: 6px 18px; font-size: 13px; font-weight: 600;
+  border-radius: 8px; padding: 6px 18px; font-size: 13px; font-weight: 600;
   min-height: 30px;
 }
 box.update-bar button.update-btn:hover { background: #60a5fa; }
 box.update-bar button.dismiss {
-  background: transparent; color: #6b7280; border: none;
-  border-radius: 6px; padding: 4px 8px; font-size: 16px;
+  background: transparent; color: #9ca3af; border: none;
+  border-radius: 8px; padding: 4px 8px; font-size: 13px;
   min-width: 28px; min-height: 28px;
 }
-box.update-bar button.dismiss:hover { background: rgba(255,255,255,0.08); color: #e5e7eb; }
+box.update-bar button.dismiss:hover { background: #1f2937; color: #e5e7eb; }
 box.update-bar image { color: #3b82f6; }
 """
 
