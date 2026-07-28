@@ -10,8 +10,10 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import urlopen, Request
 
 import gi
 
@@ -69,6 +71,20 @@ button.menu-item {
   padding: 8px 16px; font-size: 13px;
 }
 button.menu-item:hover { background: #374151; }
+/* ── Context menu (right-click in WebView) ── */
+menu {
+  background: #1f2937; border: 1px solid #374151; border-radius: 8px;
+  padding: 4px;
+}
+menuitem {
+  color: #e5e7eb; padding: 6px 12px; border-radius: 4px;
+}
+menuitem:hover, menuitem:selected {
+  background: #374151; color: #fff;
+}
+menuitem label { color: #e5e7eb; }
+separator { background: #374151; min-height: 1px; }
+
 /* ── Inline update banner ── */
 box.update-bar {
   background: #1f2937; border-bottom: 1px solid #374151;
@@ -487,10 +503,30 @@ class LunkAgentApp(Gtk.Application):
         if self._fullscreen:
             self._window.fullscreen()
 
-        # Poll GitHub for updates every 2 min
+        # Startup check + instant push notification via ntfy.sh SSE
         if (REPO_DIR / ".git").exists():
             self._check_updates_async()
-            GLib.timeout_add_seconds(120, self._check_updates_async)
+            self._start_update_listener()
+
+    NTFY_TOPIC = "lunkagent-updates"
+
+    def _start_update_listener(self):
+        """Listen on ntfy.sh for push notifications (instant, no polling)."""
+        url = f"https://ntfy.sh/{self.NTFY_TOPIC}/sse"
+        def _listen():
+            while True:
+                try:
+                    req = Request(url, headers={"Accept": "text/event-stream"})
+                    with urlopen(req, timeout=300) as resp:
+                        for line in resp:
+                            line = line.decode("utf-8", errors="replace").strip()
+                            if line.startswith("data:") and "update" in line.lower():
+                                # Verify it's actually a new commit before showing banner
+                                self._check_updates_async()
+                except Exception:
+                    threading.Event().wait(5)  # reconnect after 5s
+        t = threading.Thread(target=_listen, daemon=True)
+        t.start()
 
     def _check_updates_async(self):
         def _check():

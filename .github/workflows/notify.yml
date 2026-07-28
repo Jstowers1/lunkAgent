@@ -1,0 +1,16 @@
+name: Notify on Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify ntfy.sh
+        run: |
+          curl -fsS -H "Title: LunkAgent" \
+            -H "Tags: update" \
+            -d "New commit pushed: ${{ github.event.head_commit.message }}" \
+            "https://ntfy.sh/lunkagent-updates"
