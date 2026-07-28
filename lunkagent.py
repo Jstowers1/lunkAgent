@@ -46,6 +46,9 @@ SOUND_COMPLETE = REPO_DIR / "sounds" / "complete.wav"
 SOUND_ATTENTION = REPO_DIR / "sounds" / "attention.wav"
 
 GTK_CSS = """
+* {
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace;
+}
 window { background: #111827; }
 label { color: #e5e7eb; }
 label.title { font-size: 28px; font-weight: 700; color: #fff; }
@@ -110,7 +113,7 @@ box.update-bar button.dismiss {
   min-width: 28px; min-height: 28px;
 }
 box.update-bar button.dismiss:hover { background: #1f2937; color: #e5e7eb; }
-box.update-bar image { color: #3b82f6; }
+box.update-bar .update-icon { color: #3b82f6; font-size: 16px; }
 """
 
 
@@ -423,8 +426,9 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         inner.get_style_context().add_class("bar-inner")
         inner.set_halign(Gtk.Align.FILL)
 
-        # Download/update icon
-        icon = Gtk.Image.new_from_icon_name("software-update-available", Gtk.IconSize.MENU)
+        # Colored circle as accent indicator (no system icon — clashes with palette)
+        icon = Gtk.Label(label="\u25cf")
+        icon.get_style_context().add_class("update-icon")
         inner.pack_start(icon, False, False, 0)
 
         # Text: bold title + muted detail
