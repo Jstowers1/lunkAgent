@@ -209,7 +209,6 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._vertical_css = ""
         self._url = None
         self._webview = None
-        self._last_notify_title = None
 
     def start(self, theme_css: str, vertical_css: str):
         self._theme_css = theme_css
@@ -360,7 +359,6 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         ucom.connect("script-message-received::lunkNotify", self._on_script_message)
 
         self._webview.connect("decide-policy", self._on_decide_policy)
-        self._webview.connect("notify::title", self._on_title_notify)
         self._webview.load_uri(url)
 
         self._set_content(self._webview)
@@ -381,17 +379,6 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                 play_sound(SOUND_COMPLETE)
         except Exception:
             play_sound(SOUND_COMPLETE)
-
-    def _on_title_notify(self, webview, _param):
-        """Play sound when title changes — the WebUI prefixes '●' for attention."""
-        title = webview.get_title() or ""
-
-        # '●' prefix = session needs attention (approval, clarification, or done)
-        if title.startswith("\u25CF") and self._last_notify_title != title:
-            self._last_notify_title = title
-            play_sound(SOUND_ATTENTION)
-        elif not title.startswith("\u25CF"):
-            self._last_notify_title = None
 
     def _on_decide_policy(self, webview, decision, decision_type):
         if decision_type == WebKit2.PolicyDecisionType.NAVIGATION_ACTION:

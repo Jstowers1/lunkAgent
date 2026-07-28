@@ -87,4 +87,27 @@
   // sendBrowserNotification may be defined after our script — retry on a delay
   setTimeout(_wrapNotify, 2000);
   setTimeout(_wrapNotify, 5000);
+
+  // ── Watch title for ● prefix (attention indicator) ──
+  // WebKit2's notify::title signal is unreliable for JS-set document.title,
+  // so we observe the DOM <title> element directly and post to native.
+  var _titleObserver = new MutationObserver(function() {
+    var t = document.title || '';
+    if (t.startsWith('\u25CF')) {
+      try {
+        window.webkit.messageHandlers.lunkNotify.postMessage(
+          { title: 'attention', body: t.replace(/^\u25CF\s*/, '') }
+        );
+      } catch(_) {}
+    }
+  });
+  var _titleEl = document.querySelector('title');
+  if (_titleEl) {
+    _titleObserver.observe(_titleEl, { childList: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      var te = document.querySelector('title');
+      if (te) _titleObserver.observe(te, { childList: true });
+    });
+  }
 })();
