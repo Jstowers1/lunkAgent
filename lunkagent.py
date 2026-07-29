@@ -8,13 +8,11 @@ from __future__ import annotations
 import json
 import os
 import signal
-import sqlite3
 import subprocess
 import sys
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 from urllib.request import urlopen, Request
 
 import gi
@@ -44,11 +42,8 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 THEME_CSS = REPO_DIR / "theme" / "lunkserver-dark.css"
 VERTICAL_CSS = REPO_DIR / "theme" / "vertical.css"
 INJECT_JS = REPO_DIR / "theme" / "inject.js"
-PERSONA_CSS = REPO_DIR / "theme" / "persona-panel.css"
 SOUND_COMPLETE = REPO_DIR / "sounds" / "complete.wav"
 SOUND_ATTENTION = REPO_DIR / "sounds" / "attention.wav"
-PERSONA_DB = Path.home() / ".hermes" / "persona" / "persona.db"
-PERSONA_PORT = 8799
 
 GTK_CSS = """
 * {
@@ -204,138 +199,9 @@ def do_git_update() -> bool:
         result = subprocess.run(
             ["git", "pull", GITHUB_HTTPS, "main", "--ff-only"],
             cwd=REPO_DIR, capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            return False
-        _sync_icon()
-        return True
+        return result.returncode == 0
     except Exception:
         return False
-
-
-ICON_SVG = REPO_DIR / "icons" / "lunkagent.svg"
-ICON_INSTALLED = Path.home() / ".local/share/icons/hicolor/scalable/apps/lunkagent.svg"
-
-
-def _sync_icon() -> None:
-    """Copy the repo icon into hicolor so launchers pick up changes on update."""
-    if not ICON_SVG.exists():
-        return
-    ICON_INSTALLED.parent.mkdir(parents=True, exist_ok=True)
-    ICON_INSTALLED.write_bytes(ICON_SVG.read_bytes())
-    subprocess.run(["gtk-update-icon-cache", "-f",
-                    str(Path.home() / ".local/share/icons/hicolor")],
-                   capture_output=True, timeout=5)
-
-
-# ── Persona API server (localhost, single-user) ──
-
-class _PersonaHandler(BaseHTTPRequestHandler):
-    """Serves the persona SQLite DB over localhost HTTP for the WebUI panel."""
-
-    def log_message(self, format, *args):
-        pass  # silence stderr noise
-
-    def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-
-    def _send_json(self, data, code=200):
-        body = json.dumps(data).encode()
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self._cors()
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _read_body(self):
-        length = int(self.headers.get("Content-Length", 0))
-        if length == 0:
-            return {}
-        return json.loads(self.rfile.read(length))
-
-    def _db(self):
-        # ponytail: per-request connection — fine for single-user local panel
-        conn = sqlite3.connect(str(PERSONA_DB))
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self._cors()
-        self.end_headers()
-
-    def do_GET(self):
-        qs = parse_qs(urlparse(self.path).query)
-        q = qs.get("q", [None])[0]
-        conn = self._db()
-        try:
-            if q:
-                rows = conn.execute(
-                    "SELECT f.* FROM facts f "
-                    "JOIN facts_fts ON f.id = facts_fts.rowid "
-                    "WHERE facts_fts MATCH ? ORDER BY rank",
-                    (q,),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM facts ORDER BY category, key"
-                ).fetchall()
-            self._send_json([dict(r) for r in rows])
-        except Exception as e:
-            self._send_json({"error": str(e)}, 500)
-        finally:
-            conn.close()
-
-    def do_POST(self):
-        body = self._read_body()
-        action = body.get("action")
-        category = body.get("category", "")
-        key = body.get("key", "")
-        value = body.get("value", "")
-        confidence = body.get("confidence", "high")
-        conn = self._db()
-        try:
-            if action == "add":
-                conn.execute(
-                    "INSERT INTO facts (category, key, value, confidence) "
-                    "VALUES (?, ?, ?, ?)",
-                    (category, key, value, confidence),
-                )
-                conn.commit()
-                self._send_json({"ok": True})
-            elif action == "update":
-                conn.execute(
-                    "UPDATE facts SET value=?, confidence=?, "
-                    "updated=datetime('now') WHERE category=? AND key=?",
-                    (value, confidence, category, key),
-                )
-                conn.commit()
-                self._send_json({"ok": True})
-            elif action == "delete":
-                conn.execute(
-                    "DELETE FROM facts WHERE category=? AND key=?",
-                    (category, key),
-                )
-                conn.commit()
-                self._send_json({"ok": True})
-            else:
-                self._send_json({"error": "unknown action"}, 400)
-        except sqlite3.IntegrityError as e:
-            self._send_json({"ok": False, "error": "duplicate key in category"})
-        except Exception as e:
-            self._send_json({"error": str(e)}, 500)
-        finally:
-            conn.close()
-
-
-def start_persona_server():
-    """Start the localhost persona API on a daemon thread."""
-    server = HTTPServer(("127.0.0.1", PERSONA_PORT), _PersonaHandler)
-    t = threading.Thread(target=server.serve_forever, daemon=True)
-    t.start()
-    return server
 
 
 # ── Window ──
@@ -349,10 +215,9 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._url = None
         self._webview = None
 
-    def start(self, theme_css: str, vertical_css: str, persona_css: str):
+    def start(self, theme_css: str, vertical_css: str):
         self._theme_css = theme_css
         self._vertical_css = vertical_css
-        self._persona_css = persona_css
         self.set_title(APP_NAME)
         self.set_default_size(1280, 800)
         self.connect("key-press-event", self._on_keypress)
@@ -469,7 +334,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         ucom = self._webview.get_user_content_manager()
 
         # CSS
-        combined = self._theme_css + "\n" + self._vertical_css + "\n" + self._persona_css
+        combined = self._theme_css + "\n" + self._vertical_css
         if combined.strip():
             ucom.remove_all_style_sheets()
             ucom.add_style_sheet(
@@ -484,14 +349,10 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         # JS
         js = read_text(INJECT_JS)
         if js.strip():
-            preamble = (
-                "window.__LUNK_PERSONA_API = "
-                "'http://127.0.0.1:" + str(PERSONA_PORT) + "/api/persona';"
-            )
             ucom.remove_all_scripts()
             ucom.add_script(
                 WebKit2.UserScript(
-                    source=preamble + "\n" + js,
+                    source=js,
                     injected_frames=WebKit2.UserContentInjectedFrames.ALL_FRAMES,
                     injection_time=WebKit2.UserScriptInjectionTime.END,
                     allow_list=None, block_list=None,
@@ -642,11 +503,10 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
 # ── App ──
 
 class LunkAgentApp(Gtk.Application):
-    def __init__(self, theme_css, vertical_css, persona_css, fullscreen):
+    def __init__(self, theme_css, vertical_css, fullscreen):
         super().__init__(application_id=APP_ID, register_session=True)
         self._theme_css = theme_css
         self._vertical_css = vertical_css
-        self._persona_css = persona_css
         self._fullscreen = fullscreen
         self._window = None
 
@@ -662,8 +522,7 @@ class LunkAgentApp(Gtk.Application):
             return
         self._window = LunkAgentWindow(application=self)
         self._window.start(theme_css=self._theme_css,
-                           vertical_css=self._vertical_css,
-                           persona_css=self._persona_css)
+                           vertical_css=self._vertical_css)
         if self._fullscreen:
             self._window.fullscreen()
 
@@ -671,9 +530,6 @@ class LunkAgentApp(Gtk.Application):
         if (REPO_DIR / ".git").exists():
             self._check_updates_async()
             self._start_update_listener()
-
-        # Persona DB panel API (localhost)
-        start_persona_server()
 
     NTFY_TOPIC = "lunkagent-updates"
 
@@ -711,12 +567,11 @@ def main():
 
     theme_css = "" if no_theme else read_text(THEME_CSS)
     vertical_css = read_text(VERTICAL_CSS)
-    persona_css = read_text(PERSONA_CSS)
 
     sys.argv = [sys.argv[0]]
 
     app = LunkAgentApp(theme_css=theme_css, vertical_css=vertical_css,
-                       persona_css=persona_css, fullscreen=fullscreen)
+                       fullscreen=fullscreen)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.run(sys.argv)
 
