@@ -1,6 +1,39 @@
 # LunkAgent
 
-Native Hermes WebUI client for **CachyOS / Hyprland (Wayland)**. A GTK3 + WebKit2 wrapper that connects to any running Hermes WebUI server with a **LunkserverManager-inspired dark theme** and vertical monitor optimizations.
+A native GTK3 and WebKit2 desktop client for the Hermes WebUI. Built for
+CachyOS and Hyprland (Wayland). It embeds the real WebUI in a desktop window
+and injects a custom dark theme with vertical monitor support.
+
+## Highlights
+
+- **Thin native wrapper.** Embeds the full Hermes WebUI in a WebKit2 view.
+  No reimplementation. The WebUI has roughly 27,000 lines of HTML, CSS, and JS
+  with a mature SSE streaming layer. Wrapping it takes zero of that risk.
+- **Theme injection.** Overrides the WebUI CSS custom properties at load time
+  via `WebKit.UserStyleSheet`. The dark theme matches the LunkserverManager
+  design language.
+- **Vertical monitor support.** Detects portrait orientation through
+  JavaScript, not CSS media queries. Wayland does not report rotated displays
+  as portrait to CSS. The layout adapts at runtime.
+- **Auto-update.** Checks GitHub for new commits on startup. Maintains a
+  persistent SSE connection to an ntfy.sh topic for instant push alerts on
+  every push to main. Updates pull over HTTPS with no SSH key needed.
+- **Notification sounds.** Plays a chime when an agent finishes a task or
+  needs your input.
+- **Zero attack surface.** No server processes start. No ports open. All auth
+  and session handling stays in the Hermes WebUI server.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Language | Python 3 |
+| UI Toolkit | GTK 3, PyGObject |
+| Web Renderer | WebKit2GTK |
+| Theme | CSS custom property overrides, JavaScript injection |
+| Compositor | Hyprland (Wayland) |
+| Auto-update | GitHub API polling, ntfy.sh SSE, git pull over HTTPS |
+| CI | GitHub Actions |
 
 ## Install
 
@@ -10,7 +43,10 @@ One command:
 curl -fsSL https://raw.githubusercontent.com/Jstowers1/lunkAgent/main/install.sh | bash
 ```
 
-This installs dependencies (gtk3, python-gobject, webkit2gtk-4.1), clones the repo to `~/.local/share/lunkagent`, drops a `lunkagent` command in `~/.local/bin`, and registers the `.desktop` entry. Launch from your app menu or run `lunkagent`.
+This installs dependencies (gtk3, python-gobject, webkit2gtk-4.1), clones the
+repo to `~/.local/share/lunkagent`, drops a `lunkagent` command in
+`~/.local/bin`, and registers the `.desktop` entry. Launch from your app menu
+or run `lunkagent`.
 
 ### Manual install
 
@@ -22,30 +58,15 @@ cd lunkAgent
 ./run.sh
 ```
 
-## Updates
-
-**Automatic.** On startup, LunkAgent checks GitHub for new commits. If an update is available, you get an inline banner at the top of the window:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  ◆  Update available           [ Update ]    [×]   │
-│     A new version is ready to install               │
-└─────────────────────────────────────────────────────┘
-```
-
-Click **Update** — it pulls over HTTPS (no SSH key needed) and restarts. That's it. No `git pull`, no terminal.
-
-For **instant** notifications (not just on startup), LunkAgent maintains a persistent SSE connection to an ntfy.sh topic that receives a push on every commit to `main`. When a push arrives, it immediately verifies against the GitHub API and shows the banner if there's a real update.
-
 ## Requirements
 
-### CachyOS / Arch
+### CachyOS or Arch
 
 ```bash
 sudo pacman -S webkit2gtk-4.1 gtk3 python-gobject
 ```
 
-### Ubuntu / Debian
+### Ubuntu or Debian
 
 ```bash
 sudo apt install gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
@@ -53,33 +74,30 @@ sudo apt install gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
 
 ## Connecting to a Server
 
-The app remembers your last server. First launch (or `Ctrl+L`) shows the server picker — enter your Hermes WebUI address (e.g. `http://hostname:8787` or a Tailscale IP).
+The app remembers your last server. First launch or `Ctrl+L` shows the server
+picker. Enter your Hermes WebUI address.
 
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
-|---|---|
+|----------|--------|
 | `Ctrl+L` | Switch server |
 | `Ctrl+R` | Reload |
 
 ### CLI Flags
 
 | Flag | Effect |
-|---|---|
+|------|--------|
 | `--fullscreen` | Open in fullscreen |
-| `--no-theme` | Disable the LunkserverManager dark theme (use WebUI defaults) |
+| `--no-theme` | Disable the dark theme and use WebUI defaults |
 | `--no-sound` | Disable notification sounds |
-
-### Notification Sounds
-
-LunkAgent plays a sound when an agent finishes a task or needs your input (approval/clarification). Disable with `--no-sound`.
 
 ## Hyprland Configuration
 
 Add window rules to `~/.config/hypr/hyprland.conf`:
 
 ```ini
-# Float LunkAgent (or tile it — your choice)
+# Float LunkAgent, or tile it. Your choice.
 windowrulev2 = float, class:^(dev.lunkman.LunkAgent)$
 
 # For vertical monitors, force it to open on the portrait display:
@@ -90,44 +108,50 @@ See [`hyprland.conf.example`](hyprland.conf.example) for more options.
 
 ## Vertical Monitor Support
 
-LunkAgent detects vertical/portrait orientation via **JavaScript** (not CSS media queries — Wayland doesn't report rotated displays as portrait). When `window.innerHeight > window.innerWidth` or the width drops below 700px, a `.lunk-vertical` class is added to `<html>`.
+LunkAgent detects portrait orientation through JavaScript. Wayland does not
+report rotated displays as portrait to CSS media queries. When
+`window.innerHeight > window.innerWidth` or the width drops below 700px, the
+app adds a `.lunk-vertical` class to the page root.
 
 | Condition | What Changes |
-|---|---|
-| **Portrait** (height > width, or width < 700px) | Hides icon rail, sidebar becomes off-canvas slide-in (280px, max 80vw) with hamburger toggle + dark backdrop overlay, full-width message area and composer |
+|-----------|--------------|
+| Portrait (height greater than width, or width below 700px) | Hides the icon rail. Sidebar becomes an off-canvas slide-in panel (280px, max 80vw) with a hamburger toggle and dark backdrop overlay. Full-width message area and composer. |
 
-No configuration needed — the layout adapts to whatever window size Hyprland gives it.
+No configuration needed. The layout adapts to whatever window size Hyprland
+gives it.
 
 ## Architecture
 
 ```
-lunkagent.py                        — GTK3 + WebKit2 client: window, theme/JS injection, sound, git update check + ntfy.sh SSE listener
-theme/lunkserver-dark.css           — LunkserverManager design language via CSS variable overrides
-theme/vertical.css                  — Portrait/narrow layout (triggered by JS class, not media queries)
-theme/inject.js                     — Force dark mode, scroll-pinning fix, notification bridge to native
-sounds/complete.wav                 — Chime played on task completion
-sounds/attention.wav                — Tone played when attention needed
-install.sh                          — One-liner curl|bash installer
-run.sh                              — Manual launch wrapper
-dev.lunkman.LunkAgent.desktop       — Freedesktop.org app menu entry
-hyprland.conf.example               — Hyprland window rule examples
-.github/workflows/notify.yml        — Pushes commit notifications to ntfy.sh
+lunkagent.py                    GTK3 + WebKit2 client: window, theme injection, sound, git update check, ntfy.sh SSE listener
+theme/lunkserver-dark.css       Dark theme via CSS variable overrides
+theme/vertical.css              Portrait and narrow layout, triggered by JS class
+theme/inject.js                 Force dark mode, scroll-pinning fix, notification bridge
+sounds/complete.wav             Chime on task completion
+sounds/attention.wav            Tone when attention is needed
+install.sh                      One-liner curl and bash installer
+run.sh                          Manual launch wrapper
+dev.lunkman.LunkAgent.desktop   Freedesktop.org app menu entry
+hyprland.conf.example           Hyprland window rule examples
+.github/workflows/notify.yml    Pushes commit alerts to ntfy.sh
 ```
 
-**Design decision:** We wrap the real Hermes WebUI rather than reimplementing its frontend. The WebUI is ~27,000 lines of vanilla HTML/CSS/JS with a mature SSE streaming layer, session management, and dozens of API endpoints. Rebuilding it would be months of work for zero gain. Instead, we embed it in a WebView and inject our theme via `WebKit.UserStyleSheet` — the same mechanism the WebUI uses for its built-in skins.
-
-## Theming
-
-The LunkserverManager theme overrides the WebUI's CSS custom properties (`--bg`, `--accent`, `--font-ui`, etc.). The variable names match the WebUI's `:root.dark` block in `static/style.css`.
-
-To customize: edit `theme/lunkserver-dark.css` and restart.
+The app wraps the real Hermes WebUI rather than reimplementing its frontend.
+The WebUI ships roughly 27,000 lines of vanilla HTML, CSS, and JS with a
+mature SSE streaming layer, session management, and dozens of API endpoints.
+Rebuilding it would take months for zero gain. Instead, LunkAgent embeds it in
+a WebView and injects the theme through `WebKit.UserStyleSheet`. This is the
+same mechanism the WebUI uses for its built-in skins.
 
 ## Security
 
-- **Client-only** — no server processes are started, no ports are opened
-- **No secrets in the repo** — no API keys, tokens, or passwords stored or committed
-- **External links open in default browser** — navigation outside the WebUI origin is intercepted
-- **Public repo safe** — auth and session security are handled entirely by the Hermes WebUI server
+- **Client only.** No server processes start. No ports open.
+- **No secrets in the repo.** No API keys, tokens, or passwords stored or
+  committed.
+- **External links open in the default browser.** Navigation outside the
+  WebUI origin is intercepted.
+- **Auth stays in the server.** All authentication and session security are
+  handled by the Hermes WebUI server.
 
 ## License
 
