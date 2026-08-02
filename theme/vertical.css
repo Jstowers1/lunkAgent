@@ -1,18 +1,12 @@
-/* ═══════════════════════════════════════════════════════════════════════
- * LunkAgent — Vertical / portrait monitor optimizations
- *
- * Triggered by JS class .lunk-vertical on <html> (added when
- * window.innerHeight > window.innerWidth). We can't use CSS media queries
- * because Wayland doesn't report rotated displays as portrait orientation.
- * ═══════════════════════════════════════════════════════════════════════ */
+/*Vertical and portrait monitor optimizations, triggered by JS class lunk-vertical on html when innerHeight is greater than innerWidth, CSS media queries do not work because Wayland does not report rotated displays as portrait*/
 
-/* ── Portrait (tall > wide): full vertical treatment ── */
+/*Portrait mode when tall is greater than wide*/
 html.lunk-vertical .layout { overflow-x: clip; }
 
-/* Hide the icon rail entirely — hamburger + overlay sidebar covers all nav */
+/*Hide the icon rail entirely, hamburger and overlay sidebar cover all navigation*/
 html.lunk-vertical .rail { display: none !important; }
 
-/* Sidebar: off-canvas slide-in */
+/*Sidebar slides in from off canvas*/
 html.lunk-vertical .sidebar {
   position: fixed !important;
   left: 0; top: 0; bottom: 0;
@@ -29,17 +23,14 @@ html.lunk-vertical .sidebar.mobile-panel-drawer.mobile-open {
 }
 html.lunk-vertical .sidebar .resize-handle { display: none !important; }
 
-/* Show hamburger button */
+/*Show hamburger button*/
 html.lunk-vertical .app-titlebar-hamburger,
 html.lunk-vertical .app-titlebar-spacer { display: flex !important; }
 
-/* The WebUI hides .sidebar-nav at min-width:641px (rail has duplicate buttons).
-   Since we hide the rail, force sidebar-nav visible so nav tabs appear in the
-   overlay sidebar. */
+/*The WebUI hides sidebar-nav at min-width 641px because the rail has duplicate buttons, since we hide the rail force sidebar-nav visible so nav tabs appear in the overlay sidebar*/
 html.lunk-vertical .sidebar > .sidebar-nav { display: flex !important; flex-wrap: wrap !important; }
 
-/* Nav tab tooltips: .nav-tab has overflow:hidden which clips ::after.
-   Override overflow and position tooltip below in vertical mode. */
+/*Nav tab tooltips get clipped by overflow hidden, override overflow and position tooltip below in vertical mode*/
 html.lunk-vertical .sidebar-nav .nav-tab { overflow: visible !important; }
 html.lunk-vertical .sidebar-nav .nav-tab:hover::after {
   bottom: auto !important;
@@ -47,7 +38,7 @@ html.lunk-vertical .sidebar-nav .nav-tab:hover::after {
   z-index: 250 !important;
 }
 
-/* Dark backdrop overlay */
+/*Dark backdrop overlay*/
 html.lunk-vertical .mobile-overlay {
   position: fixed !important;
   inset: 0 !important;
@@ -62,11 +53,11 @@ html.lunk-vertical body:not(:has(.sidebar.mobile-open)) .mobile-overlay {
   display: none !important;
 }
 
-/* Full width for content */
+/*Full width for content*/
 html.lunk-vertical .messages-inner { max-width: 100% !important; padding: 16px !important; }
 html.lunk-vertical .composer-wrap { padding: 8px 12px 12px !important; }
 
-/* Right panel also slides over */
+/*Right panel also slides over*/
 html.lunk-vertical .rightpanel {
   position: fixed !important;
   right: 0; top: 0; bottom: 0;

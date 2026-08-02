@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-LunkAgent — Native Hermes WebUI client for CachyOS / Hyprland (Wayland).
-GTK3 + WebKit2 client with LunkserverManager-inspired dark theme.
+LunkAgent is a native Hermes WebUI client for CachyOS and Hyprland, it uses GTK3 and WebKit2 with a dark theme
 """
 from __future__ import annotations
 
@@ -74,7 +73,7 @@ button.menu-item {
   padding: 8px 16px; font-size: 13px;
 }
 button.menu-item:hover { background: #374151; }
-/* ── Context menu (right-click in WebView) ── */
+/*Context menu for right click in the webview*/
 menu {
   background: #1f2937; border: 1px solid #374151; border-radius: 8px;
   padding: 4px;
@@ -90,7 +89,7 @@ menuitem:hover, menuitem:selected {
 menuitem label { color: #e5e7eb; }
 separator { background: #374151; min-height: 1px; }
 
-/* ── Inline update banner ── */
+/*Inline update banner*/
 box.update-bar {
   background: #1f2937; border-bottom: 1px solid #374151;
   padding: 0;
@@ -117,7 +116,7 @@ box.update-bar .update-icon { color: #3b82f6; font-size: 16px; }
 """
 
 
-# ── Config ──
+#Config
 
 def load_config() -> dict:
     try:
@@ -148,13 +147,13 @@ def normalize_url(url: str) -> str:
     return url.rstrip("/")
 
 
-# ── Sound ──
+#Sound
 
 _NO_SOUND = False
 
 
 def play_sound(path: Path) -> None:
-    """Play a WAV file. Tries pw-cat (PipeWire), falls back to aplay."""
+    """Play a WAV file, tries pw-cat first then falls back to aplay"""
     if _NO_SOUND or not path.exists():
         return
     for cmd in (
@@ -168,15 +167,14 @@ def play_sound(path: Path) -> None:
             continue
 
 
-# ── Version check via GitHub API (no SSH key needed) ──
+#Version check uses the GitHub API with no SSH key needed
 
 GITHUB_HTTPS = "https://github.com/Jstowers1/lunkAgent.git"
 GITHUB_API = "https://api.github.com/repos/Jstowers1/lunkAgent/commits/main"
 
 
 def check_git_update() -> str | None:
-    """Returns the remote SHA if GitHub remote main has a commit we don't
-    have locally, else None. Uses the public GitHub API — no SSH key/token."""
+    """Returns the remote SHA if GitHub has a new commit, else returns None, uses the public GitHub API with no key or token"""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=REPO_DIR,
@@ -193,8 +191,7 @@ def check_git_update() -> str | None:
 
 
 def do_git_update() -> bool:
-    """Pull latest from GitHub over HTTPS (public repo, no auth needed).
-    Doesn't touch the SSH remote config — uses a one-shot HTTPS URL."""
+    """Pull latest from GitHub over HTTPS, public repo with no auth needed, does not touch SSH remote config"""
     try:
         result = subprocess.run(
             ["git", "pull", GITHUB_HTTPS, "main", "--ff-only"],
@@ -204,7 +201,7 @@ def do_git_update() -> bool:
         return False
 
 
-# ── Window ──
+#Window
 
 class LunkAgentWindow(Gtk.ApplicationWindow):
 
@@ -222,10 +219,10 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self.set_default_size(1280, 800)
         self.connect("key-press-event", self._on_keypress)
 
-        # root vbox: [optional update bar] + [content area]
+        #root box holds the update bar and the content area
         self._root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.add(self._root)
-        self._content_area = None  # holds setup screen or webview
+        self._content_area = None  #holds setup screen or webview
         self._update_bar = None
 
         cfg = load_config()
@@ -247,7 +244,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
             return True
         return False
 
-    # ── Setup screen ──
+    #Setup screen
 
     def show_setup(self):
         self._clear_child()
@@ -322,7 +319,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         save_config(cfg)
         self.show_webview(url)
 
-    # ── WebView ──
+    #Webview
 
     def show_webview(self, url: str):
         self._clear_child()
@@ -333,7 +330,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
 
         ucom = self._webview.get_user_content_manager()
 
-        # CSS
+        #CSS
         combined = self._theme_css + "\n" + self._vertical_css
         if combined.strip():
             ucom.remove_all_style_sheets()
@@ -346,7 +343,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                 )
             )
 
-        # JS
+        #JS
         js = read_text(INJECT_JS)
         if js.strip():
             ucom.remove_all_scripts()
@@ -359,7 +356,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                 )
             )
 
-        # Register message handler for native notifications (sound)
+        #Register message handler for native sound notifications
         ucom.register_script_message_handler("lunkNotify")
         ucom.connect("script-message-received::lunkNotify", self._on_script_message)
 
@@ -369,7 +366,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         self._set_content(self._webview)
 
     def _on_script_message(self, ucom, js_result):
-        """Called when injected JS posts to the lunkNotify handler — play sound."""
+        """Called when injected JS posts to the lunkNotify handler, plays sound"""
         try:
             val = js_result.get_js_value()
             s = val.to_string()
@@ -402,21 +399,21 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         return False
 
     def _clear_child(self):
-        """Remove the content area (setup screen or webview), keep update bar."""
+        """Remove the content area but keep the update bar"""
         if self._content_area:
             self._root.remove(self._content_area)
             self._content_area.destroy()
             self._content_area = None
 
     def _set_content(self, widget):
-        """Swap the content area, preserving the update bar if present."""
+        """Swap the content area and preserve the update bar"""
         self._clear_child()
         self._content_area = widget
         self._root.pack_end(self._content_area, True, True, 0)
         self._root.show_all()
 
     def show_update_bar(self):
-        """Show an inline update banner at the top of the window."""
+        """Show an update banner at the top of the window"""
         if self._update_bar:
             return
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
@@ -426,12 +423,12 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         inner.get_style_context().add_class("bar-inner")
         inner.set_halign(Gtk.Align.FILL)
 
-        # Colored circle as accent indicator (no system icon — clashes with palette)
+        #Colored circle as accent indicator, system icons clash with the palette
         icon = Gtk.Label(label="\u25cf")
         icon.get_style_context().add_class("update-icon")
         inner.pack_start(icon, False, False, 0)
 
-        # Text: bold title + muted detail
+        #Bold title with muted detail
         text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         title = Gtk.Label(label="Update available")
         title.get_style_context().add_class("title")
@@ -448,7 +445,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
         update_btn.connect("clicked", lambda w: self._do_update())
         inner.pack_start(update_btn, False, False, 0)
 
-        dismiss_btn = Gtk.Button(label="\u00d7")  # ×
+        dismiss_btn = Gtk.Button(label="\u00d7")  #times symbol for close
         dismiss_btn.get_style_context().add_class("dismiss")
         dismiss_btn.connect("clicked", lambda w: self._hide_update_bar())
         inner.pack_start(dismiss_btn, False, False, 0)
@@ -466,8 +463,8 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
             self._update_bar = None
 
     def _do_update(self):
-        """Pull update and restart the app."""
-        # Show "updating..." state
+        """Pull the update then restart the app"""
+        #Show updating state
         for child in self._update_bar.get_children():
             if isinstance(child, Gtk.Button) and child.get_label() == "Update":
                 child.set_label("Updating...")
@@ -483,12 +480,12 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
     def _on_update_done(self, ok: bool):
         if ok:
             self._hide_update_bar()
-            # Restart cleanly: re-exec the process
+            #Restart by reexecuting the process
             GLib.timeout_add(100, lambda: self._restart())
         else:
             if not self._update_bar:
                 return
-            # Show error in the bar
+            #Show error in the bar
             for child in self._update_bar.get_children():
                 if isinstance(child, Gtk.Label):
                     child.set_text("Update failed - check your connection")
@@ -500,7 +497,7 @@ class LunkAgentWindow(Gtk.ApplicationWindow):
                  [sys.executable, str(REPO_DIR / "lunkagent.py")] + sys.argv[1:])
 
 
-# ── App ──
+#App
 
 class LunkAgentApp(Gtk.Application):
     def __init__(self, theme_css, vertical_css, fullscreen):
@@ -526,7 +523,7 @@ class LunkAgentApp(Gtk.Application):
         if self._fullscreen:
             self._window.fullscreen()
 
-        # Startup check + instant push notification via ntfy.sh SSE
+        #Startup check and push notification via ntfy SSE
         if (REPO_DIR / ".git").exists():
             self._check_updates_async()
             self._start_update_listener()
@@ -534,7 +531,7 @@ class LunkAgentApp(Gtk.Application):
     NTFY_TOPIC = "lunkagent-updates"
 
     def _start_update_listener(self):
-        """Listen on ntfy.sh for push notifications (instant, no polling)."""
+        """Listen on ntfy for push notifications, instant with no polling"""
         url = f"https://ntfy.sh/{self.NTFY_TOPIC}/sse"
         def _listen():
             while True:
@@ -544,10 +541,10 @@ class LunkAgentApp(Gtk.Application):
                         for line in resp:
                             line = line.decode("utf-8", errors="replace").strip()
                             if line.startswith("data:") and "update" in line.lower():
-                                # Verify it's actually a new commit before showing banner
+                                #Verify it is a new commit before showing the banner
                                 self._check_updates_async()
                 except Exception:
-                    threading.Event().wait(5)  # reconnect after 5s
+                    threading.Event().wait(5)  #reconnect after 5s
         t = threading.Thread(target=_listen, daemon=True)
         t.start()
 

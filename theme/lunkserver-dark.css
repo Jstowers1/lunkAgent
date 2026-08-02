@@ -1,16 +1,9 @@
-/* ═══════════════════════════════════════════════════════════════════════
- * LunkAgent — LunkserverManager-inspired dark theme for Hermes WebUI
- *
- * Injected via WebKit2 UserStyleSheet (USER level, all frames).
- * Targets the real CSS variable system in static/style.css.
- * ═══════════════════════════════════════════════════════════════════════ */
+/*LunkAgent dark theme for Hermes WebUI, injected via WebKit2 UserStyleSheet at USER level for all frames, targets the CSS variable system in static/style.css*/
 
-/* ── Force dark mode on the root element ── */
+/*Force dark mode on the root element*/
 html { color-scheme: dark; }
 
-/* Override variables on BOTH .dark and :root to win specificity.
-   The WebUI's own :root.dark {} block sets the dark palette; we override it.
-   Using :root.dark (same specificity as original) + !important on key values. */
+/*Override variables on both dark and root to win specificity, the WebUI sets its own dark palette, we override with same specificity and important on key values*/
 :root,
 :root.dark {
   --bg: #111827 !important;
@@ -52,12 +45,12 @@ html { color-scheme: dark; }
   --user-bubble-text: #e5e7eb !important;
   --user-bubble-placeholder: #9ca3af !important;
 
-  /* LunkserverManager design language: JetBrainsMono Nerd Font everywhere */
+  /*Use JetBrainsMono Nerd Font everywhere*/
   --font-ui: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
   --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace !important;
 }
 
-/* ── Structural elements: titlebar, rail, sidebar, composer ── */
+/*Structural elements titlebar rail sidebar and composer*/
 .app-titlebar,
 .rail,
 .sidebar,
@@ -67,18 +60,18 @@ html { color-scheme: dark; }
   box-shadow: none !important;
 }
 
-/* ── Main content background ── */
+/*Main content background*/
 .main {
   background: var(--main-bg) !important;
 }
 
-/* ── LunkserverManager font everywhere ── */
+/*LunkserverManager font everywhere*/
 body, input, textarea, select, button,
 .msg-body, .session-item, .app-titlebar-title {
   font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace !important;
 }
 
-/* ── Composer box: the text input area ── */
+/*Composer box is the text input area*/
 .composer-box {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
@@ -90,7 +83,7 @@ body, input, textarea, select, button,
   box-shadow: 0 0 0 2px var(--focus-ring) !important;
 }
 
-/* ── Text input: dark bg, light text (fixes white-on-white unreadable text) ── */
+/*Text input dark background light text, fixes white on white unreadable text*/
 textarea#msg {
   color: var(--text) !important;
   background: transparent !important;
@@ -100,7 +93,7 @@ textarea#msg::placeholder {
   color: var(--muted) !important;
 }
 
-/* ── Inputs generally ── */
+/*General input styles*/
 input[type="text"], input[type="password"], input[type="search"],
 input[type="email"], input[type="url"], input[type="number"],
 select, textarea {
@@ -111,14 +104,14 @@ select, textarea {
 }
 input::placeholder, textarea::placeholder { color: var(--muted) !important; }
 
-/* ── Scrollbars: thin, LunkserverManager style ── */
+/*Thin scrollbars*/
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #374151; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 * { scrollbar-width: thin; scrollbar-color: #374151 transparent; }
 
-/* ── Code blocks ── */
+/*Code blocks*/
 .msg-body pre,
 .msg-body code {
   background: var(--code-bg) !important;
@@ -126,15 +119,15 @@ input::placeholder, textarea::placeholder { color: var(--muted) !important; }
 }
 .msg-body code { color: var(--code-text) !important; }
 
-/* ── Links ── */
+/*Links*/
 a { color: var(--blue); }
 a:hover { color: var(--accent-hover); }
 
-/* ── Session list items ── */
+/*Session list items*/
 .session-item:hover { background: var(--hover-bg) !important; }
 .session-item.active { background: var(--accent-bg) !important; }
 
-/* ── Dialogs / modals ── */
+/*Dialogs and modals*/
 .app-dialog, .app-dialog-header {
   background: var(--surface) !important;
   border-color: var(--border) !important;

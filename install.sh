@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# LunkAgent installer — one-liner: curl | bash
+#LunkAgent installer, run with curl pipe bash
 set -euo pipefail
 
 INSTALL_DIR="${LUNKAGENT_DIR:-$HOME/.local/share/lunkagent}"
@@ -9,7 +9,7 @@ REPO_URL="https://github.com/Jstowers1/lunkAgent.git"
 echo "═══ LunkAgent Installer ═══"
 echo ""
 
-# 1. Dependencies
+#Dependencies
 echo "→ Installing dependencies..."
 if command -v pacman &>/dev/null; then
     sudo pacman -S --needed --noconfirm gtk3 python-gobject webkit2gtk-4.1
@@ -19,7 +19,7 @@ else
     echo "⚠ Unknown package manager. Install manually: gtk3, python-gobject, webkit2gtk-4.1"
 fi
 
-# 2. Clone (or update existing)
+#Clone or update existing
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo "→ Updating existing install at $INSTALL_DIR"
     git -C "$INSTALL_DIR" pull "$REPO_URL" main --ff-only
@@ -28,7 +28,7 @@ else
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# 3. Launcher wrapper in ~/.local/bin
+#Launcher wrapper in local bin
 mkdir -p "$BIN_DIR"
 cat > "$BIN_DIR/lunkagent" << EOF
 #!/bin/bash
@@ -37,13 +37,13 @@ exec python3 lunkagent.py "\$@"
 EOF
 chmod +x "$BIN_DIR/lunkagent"
 
-# 4. App icon
+#App icon
 ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 mkdir -p "$ICON_DIR"
 cp "$INSTALL_DIR/icons/lunkagent.svg" "$ICON_DIR/lunkagent.svg"
 gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 
-# 5. .desktop entry
+#Desktop entry
 APP_DIR="$HOME/.local/share/applications"
 mkdir -p "$APP_DIR"
 cp "$INSTALL_DIR/dev.lunkman.LunkAgent.desktop" "$APP_DIR/dev.lunkman.LunkAgent.desktop"

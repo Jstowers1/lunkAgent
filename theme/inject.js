@@ -1,17 +1,14 @@
-/* LunkAgent — injected JS.
-   Runs on every navigation via WebKit2 UserScript (END of document).
-*/
+/*LunkAgent injected JS, runs on every navigation via WebKit2 UserScript at end of document*/
 
 (function() {
   'use strict';
 
-  // ── Force dark mode ──
+  //Force dark mode
   document.documentElement.classList.add('dark');
 
-  // ── Portrait/narrow detection via JS, not media queries ──
-  // Wayland doesn't report rotated displays as "portrait". Also, half a
-  // vertical monitor (1080×960) is landscape aspect but still too narrow
-  // for the rail + sidebar side by side.
+  //Portrait and narrow detection via JS not media queries
+  //Wayland does not report rotated displays as portrait
+  //Half a vertical monitor is landscape but too narrow for rail and sidebar side by side
   function _updatePortrait() {
     var el = document.documentElement;
     if (window.innerHeight > window.innerWidth || window.innerWidth < 700) {
@@ -23,14 +20,11 @@
   _updatePortrait();
   window.addEventListener('resize', _updatePortrait);
 
-  // ── Auto-scroll fix ──
-  // The WebUI's scroll-pinning system can lose pin mid-stream during DOM
-  // re-renders: a programmatic scrollTop write gets misdetected as user
-  // scroll-up, setting _scrollPinned=false. The next renderMessages captures
-  // a snapshot with pinned:false, and the restore uses a semantic anchor
-  // pointing at an older row → user gets yanked upward.
-  // Fix: wrap _captureMessageScrollSnapshot so it forces pinned:true while
-  // a stream is active and the user hasn't genuinely scrolled away.
+  //Auto scroll fix
+  //The scroll pinning system loses pin during DOM rerenders
+  //A programmatic scrollTop write gets misdetected as user scroll up
+  //This sets _scrollPinned to false and the restore anchors to an older row
+  //The fix wraps _captureMessageScrollSnapshot to force pinned true while streaming
   function _isStreaming() {
     try { return (typeof S !== 'undefined' && S && (S.busy || S.activeStreamId)); }
     catch(_) {}
@@ -45,8 +39,7 @@
     var _origCapture = _captureMessageScrollSnapshot;
     _captureMessageScrollSnapshot = function() {
       var snap = _origCapture.apply(this, arguments);
-      // During active streaming, force pinned state so DOM re-renders
-      // preserve the tail position instead of anchoring to stale rows.
+      //During active streaming force pinned state so DOM rerenders preserve the tail position
       if (snap && _isStreaming()) {
         snap.pinned = true;
         snap.userUnpinned = false;
@@ -68,7 +61,7 @@
   _patchScrollSnapshot();
   setTimeout(_patchScrollSnapshot, 2000);
 
-  // ── Bridge sendBrowserNotification to native for sound ──
+  //Bridge sendBrowserNotification to native for sound
   function _wrapNotify() {
     if (typeof sendBrowserNotification === 'function' && !window._lunkNotifyWrapped) {
       window._lunkNotifyWrapped = true;
@@ -84,13 +77,13 @@
     }
   }
   _wrapNotify();
-  // sendBrowserNotification may be defined after our script — retry on a delay
+  //sendBrowserNotification may be defined after our script, retry on a delay
   setTimeout(_wrapNotify, 2000);
   setTimeout(_wrapNotify, 5000);
 
-  // ── Watch title for ● prefix (attention indicator) ──
-  // WebKit2's notify::title signal is unreliable for JS-set document.title,
-  // so we observe the DOM <title> element directly and post to native.
+  //Watch title for the dot prefix which marks attention
+  //WebKit2 notify title signal is unreliable for JS set document title
+  //Observe the DOM title element directly and post to native
   var _titleObserver = new MutationObserver(function() {
     var t = document.title || '';
     if (t.startsWith('\u25CF')) {
